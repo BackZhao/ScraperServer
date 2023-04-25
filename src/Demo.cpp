@@ -1,18 +1,23 @@
-#include "ApiManager.h"
+#include <iostream>
 
-#include "Config.h"
 #include "DataSource.h"
-#include "HttpServer.h"
 #include "Logger.h"
+#include "Config.h"
 #include "Option.h"
+#include "ApiManager.h"
+#include "HttpServer.h"
+
 #include "Tmdb.h"
+
+#include <fstream>
+
 #include "version.h"
 
 int main(int argc, char* argv[])
 {
     // 解析命令行参数
     Option option(argc, argv);
-    int    ret = option.Process();
+    int ret = option.Process();
     if (ret <= 0) {
         return ret;
     }

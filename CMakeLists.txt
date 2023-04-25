@@ -3,14 +3,48 @@ cmake_minimum_required(VERSION 3.16)
 project(
     ScraperServer
     VERSION 1.0
-    LANGUAGES CXX
+    LANGUAGES CXX C
 )
+
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/modules)
 
 include(FetchContent)
 
+# version
+include(AddVersionMacro)
+add_version_macro(${PROJECT_NAME})
+
+# getopt
+if(NOT TARGET getopt)
+if(WIN32)
+  find_package(getopt QUIET)
+  if(NOT TARGET getopt)
+    FetchContent_Declare(
+      getopt
+      GIT_REPOSITORY "https://gitee.com/BackZhao97/getopt.git"
+      GIT_SHALLOW ON
+      GIT_PROGRESS ON
+      )
+    FetchContent_GetProperties(getopt)
+    if(NOT getopt_POPULATED)
+      message(STATUS "Configuring getopt")
+      FetchContent_Populate(getopt)
+      add_subdirectory(
+        ${getopt_SOURCE_DIR} ${getopt_BINARY_DIR} EXCLUDE_FROM_ALL
+        )
+    endif()
+  endif()
+  if(NOT TARGET getopt)
+    message(FATAL_ERROR "getopt is not found")
+  endif()
+else()
+  add_library(getopt INTERFACE)
+endif()
+endif()
+
 # poco
-find_package(Poco QUIET COMPONENTS Net Util JSON CONFIG)
-if(NOT TARGET Poco::Net)
+find_package(Poco QUIET COMPONENTS Foundation)
+if(NOT TARGET Poco::Foundation)
   set(DISABLE_CPP14 ON)
   foreach(
     prop
@@ -21,7 +55,7 @@ if(NOT TARGET Poco::Net)
     ## zip
     ENABLE_ZIP
     ## format
-    ENABLE_XML
+    # ENABLE_XML
     # ENABLE_JSON
     ## ssl
     ENABLE_NETSSL
@@ -53,10 +87,101 @@ if(NOT TARGET Poco::Net)
 
   FetchContent_Declare(
     poco
-    GIT_REPOSITORY "https://github.com/pocoproject/poco"
+    GIT_REPOSITORY "https://github.com/pocoproject/poco.git"
     GIT_TAG poco-1.12.4-release
     EXCLUDE_FROM_ALL
     )
+  FetchContent_GetProperties(poco)
+  if(NOT poco_POPULATED)
+    FetchContent_Populate(poco)
+    add_subdirectory(${poco_SOURCE_DIR} ${poco_BINARY_DIR})
+  endif ()
 endif()
 
-add_executable(ScraperServer src/main.cpp)
+# spdlog
+find_package(spdlog QUIET)
+if(NOT TARGET spdlog::spdlog_header_only)
+  FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY "https://github.com/gabime/spdlog.git"
+    GIT_TAG v1.x
+    EXCLUDE_FROM_ALL
+    )
+  FetchContent_GetProperties(spdlog)
+  if(NOT spdlog_POPULATED)
+    FetchContent_Populate(spdlog)
+    add_subdirectory(${spdlog_SOURCE_DIR} ${spdlog_BINARY_DIR})
+  endif ()
+endif()
+
+add_library(Logger
+  STATIC
+  src/Logger.cpp
+  )
+target_link_libraries(Logger
+  PUBLIC
+    spdlog::spdlog_header_only
+  )
+
+add_library(Option
+  STATIC
+  src/Option.cpp
+  )
+target_link_libraries(Option
+  PRIVATE
+  ${version_macro}
+  getopt
+  )
+
+add_library(Config
+  STATIC
+  src/Config.cpp
+  )
+target_link_libraries(Config
+  PRIVATE
+  Poco::JSON
+  Poco::Foundation
+  Logger
+  )
+
+add_executable(Demo
+  src/Demo.cpp
+  src/HttpRequestHandler.cpp
+  src/HttpServer.cpp
+  src/ApiManager.cpp
+  src/DataConvert.cpp
+  src/DataSource.cpp
+  src/Tmdb.cpp
+  )
+target_link_libraries(Demo
+  PRIVATE
+    ${version_macro}
+    # DataSource
+    Logger
+    Config
+    Option
+    Poco::Net
+    Poco::JSON
+    Poco::XML
+  )
+
+add_executable(ScraperServer
+  src/main.cpp
+  src/HttpRequestHandler.cpp
+  src/HttpServer.cpp
+  src/ApiManager.cpp
+  src/DataConvert.cpp
+  src/DataSource.cpp
+  src/Tmdb.cpp
+  )
+target_link_libraries(ScraperServer
+  PRIVATE
+    ${version_macro}
+    # DataSource
+    Logger
+    Config
+    Option
+    Poco::Net
+    Poco::JSON
+    Poco::XML
+  )

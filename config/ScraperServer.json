@@ -1,0 +1,34 @@
+{
+    "port": 54250,
+    "logLevel": "info",
+    "API": {
+        "APIKey": "dd1e95388b7b0650d53f3cf91b44c743",
+        "URLs": {
+            "SearchMovie": "http://api.themoviedb.org/3/search/movie",
+            "SearchTV": "http://api.themoviedb.org/3/search/tv",
+            "GetMovieCredits": "http://api.themoviedb.org/3/movie/",
+            "GetMovieDetail": "http://api.themoviedb.org/3/movie/",
+            "GetTVCredits": "http://api.themoviedb.org/3/tv/{tv_id}/credits",
+            "GetTVDetail": "http://api.themoviedb.org/3/tv/",
+            "GetSeasonDetail": "http://api.themoviedb.org/3/tv/{tv_id}/season/",
+            "ImageDownload": "http://image.tmdb.org/t/p/"
+        },
+        "Timeout": {
+            "Download": 15,
+            "Json": 5
+        },
+        "Quality": {
+            "ImageDownload": "original",
+            "ImagePreview": "w185"
+        }
+    },
+    "DataSource": {
+        "RefreshInterval": 60,
+        "Movies": [
+            "/data/Movies"
+        ],
+        "TVs": [
+            "/data/TVs"
+        ]
+    }
+}

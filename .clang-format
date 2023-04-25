@@ -1,0 +1,38 @@
+---
+Language:      Cpp
+BasedOnStyle:  LLVM
+AccessModifierOffset: -4
+IndentAccessModifiers: false
+IndentCaseBlocks: false
+IndentCaseLabels: true
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignEscapedNewlines: Left
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: true
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Linux
+DerivePointerAlignment: true
+IncludeBlocks:       Preserve
+IndentWidth:         4
+KeepEmptyLinesAtTheStartOfBlocks: false
+PointerAlignment:    Left
+Standard:            Auto
+TabWidth:            4
+UseTab:              Never
+ColumnLimit:         120
+EmptyLineAfterAccessModifier: Always
+BraceWrapping:
+    AfterFunction: true
+    AfterNamespace: true
+    AfterExternBlock: false
+    AfterClass: false
+    AfterStruct: false
+    AfterUnion: false
+    AfterEnum: false
+...
