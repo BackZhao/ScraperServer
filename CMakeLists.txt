@@ -8,6 +8,7 @@ project(
 
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/modules)
 
+# fetch content
 include(FetchContent)
 
 # version
@@ -89,12 +90,11 @@ if(NOT TARGET Poco::Foundation)
     poco
     GIT_REPOSITORY "https://github.com/pocoproject/poco.git"
     GIT_TAG poco-1.12.4-release
-    EXCLUDE_FROM_ALL
     )
   FetchContent_GetProperties(poco)
   if(NOT poco_POPULATED)
     FetchContent_Populate(poco)
-    add_subdirectory(${poco_SOURCE_DIR} ${poco_BINARY_DIR})
+    add_subdirectory(${poco_SOURCE_DIR} ${poco_BINARY_DIR} EXCLUDE_FROM_ALL)
   endif ()
 endif()
 
@@ -185,3 +185,50 @@ target_link_libraries(ScraperServer
     Poco::JSON
     Poco::XML
   )
+
+# if(CMAKE_VERSION VERSION_LESS 3.17)
+#   foreach(target Net JSON XML Foundation)
+#     get_property(target_header TARGET ${target} PROPERTY PUBLIC_HEADER SET)
+#     if(target_header)
+#       set_property(TARGET ${target} PROPERTY PUBLIC_HEADER "")
+#     endif()
+#   endforeach()
+#   unset(target)
+#   unset(target_header)
+# endif()
+
+# install
+include(GNUInstallDirs)
+install(
+  TARGETS
+    ScraperServer
+    Demo
+    Net
+    JSON
+    XML
+    Foundation
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+
+set(CPACK_PACKAGE_VENDOR "backzhao@qq.com")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_VERBATIM_VARIABLES YES)
+set(CPACK_GENERATOR TGZ)
+set(CPACK_IGNORE_FILES
+   /build
+)
+set(CPACK_SOURCE_GENERATOR ZIP)
+set(CPACK_SOURCE_IGNORE_FILES
+  /build/
+  /zig-cache/
+  /zig-out/
+  /\\.cache/
+  /\\.git
+  /\\.gitattributes
+  /\\.gitignore
+  /\\.vs/
+)
+include(CPack)
