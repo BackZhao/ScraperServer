@@ -17,6 +17,8 @@ jobs:
       - name: Checkout codes
         #使用checkout@v2这个action获取源码
         uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt install build-essential ninja-build cmake
       - name: CMake configure
         run: cmake -B build/native -G Ninja
       - name: CMake build
