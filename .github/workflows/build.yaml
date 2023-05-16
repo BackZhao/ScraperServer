@@ -15,7 +15,7 @@ jobs:
       - name: Checkout codes
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: sudo apt install build-essential ninja-build cmake
+        uses: seanmiddleditch/gha-setup-ninja@master
       - name: CMake configure
         run: cmake -B build/native -G Ninja
       - name: CMake build
