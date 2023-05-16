@@ -1,0 +1,29 @@
+name: Build
+# 触发 workflow 的事件
+on:
+  push:
+    # 分支随意
+    branches:
+      - master
+# 一个workflow由执行的一项或多项job
+jobs:
+  # 一个job任务，任务名为build
+  build:
+    #运行在最新版ubuntu系统中
+    runs-on: ubuntu-22.04
+    #步骤合集
+    steps:
+      #新建一个名为checkout_actions的步骤
+      - name: Checkout codes
+        #使用checkout@v2这个action获取源码
+        uses: actions/checkout@v3
+      - name: CMake configure
+        run: cmake -B build/native -G Ninja
+      - name: CMake build
+        run: cmake --build build/native --verbose
+      - name: CMake package
+        run: cmake --build build/native --target package
+      - uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: build/native/*.tar.gz
