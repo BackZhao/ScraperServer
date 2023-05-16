@@ -11,7 +11,7 @@
 
 int HTTPServerApp::m_signum = -1;
 
-void HTTPServerApp::RefreshManager()
+void HTTPServerApp::AutoUpdate()
 {
     while (m_signum == -1) {
         ApiManager::Instance().AutoUpdateTV();
@@ -52,7 +52,7 @@ int HTTPServerApp::run()
     m_httpServer->start();
 
     // 启动Manager的刷新线程
-    m_managerRefreshThread = std::thread(std::bind(&HTTPServerApp::RefreshManager, this));
+    m_managerRefreshThread = std::thread(std::bind(&HTTPServerApp::AutoUpdate, this));
     m_signalHandleThread   = std::thread(std::bind(&HTTPServerApp::WaitingSignal, this));
 
     // 初始化Manager

@@ -61,10 +61,10 @@ private:
     void initialize();
 
     /**
-     * @brief 周期检查Manager中的各进程
+     * @brief 自动更新NFO文件, 目前仅支持新增的剧集
      *
      */
-    void RefreshManager();
+    void AutoUpdate();
 
     /**
      * @brief 等待捕获信号
