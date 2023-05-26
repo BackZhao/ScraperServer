@@ -159,6 +159,9 @@ bool UpdateTV(VideoInfo& videoInfo)
     if (!WriteEpisodeNfo(episodesJsonArr, videoInfo.videoDetail.episodePaths)) {
         LOG_ERROR("Write episode nfos failed!")
         return false;
+    } else {
+        // 如果写入成功, 需要即时更新, 否则剧集nfo个数未更新会导致反复写入新剧集的nfo
+        videoInfo.videoDetail.episodeNfoCount = videoInfo.videoDetail.episodePaths.size();
     }
 
     // FIXME: XML更新错误 
