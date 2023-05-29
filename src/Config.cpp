@@ -11,13 +11,9 @@
 #include <Poco/Path.h>
 #include <Poco/StreamCopier.h>
 
-#ifndef CONF_FILE_NAME
-#define CONF_FILE_NAME "ScraperServer.json"
-#endif
-
-#ifndef DEFAULT_HTTP_SERVER_PORT
-#define DEFAULT_HTTP_SERVER_PORT 54250
-#endif
+const std::string CONF_FILE_NAME           = "ScraperServer.json"; // 默认的配置文件名称
+const int         DEFAULT_HTTP_SERVER_PORT = 54250;                // 默认的HTTP服务器监听端口
+const int         AUTO_INTERVAL            = 300;                  // 默认的自动刮削间隔, 单位: 秒
 
 Config& Config::Instance()
 {
@@ -58,6 +54,11 @@ void Config::SetLogLevel(int logLevel)
     m_appConf.logLevel = logLevel;
 }
 
+void Config::SetAuto(bool isAuto)
+{
+    m_appConf.isAuto = isAuto;
+}
+
 void Config::DecreaseLogLevel()
 {
     if (m_appConf.logLevel > 0) {
@@ -85,6 +86,16 @@ std::string Config::GetLogFile()
 {
     // 未设置HTTP服务器的监听端口时, 返回默认值
     return m_appConf.logFile;
+}
+
+int Config::GetAutoInterval()
+{
+    return m_appConf.autoInterval;
+}
+
+bool Config::IsAuto()
+{
+    return m_appConf.isAuto;
 }
 
 const std::map<VideoType, std::vector<std::string>>& Config::GetPaths()
@@ -130,7 +141,7 @@ bool Config::ParseConfFile()
         if (m_appConf.httpConf.port != 0) {
             std::cout << "HTTP listen port is specified by cli, ignore value in config file." << std::endl;
         } else {
-            m_appConf.httpConf.port = jsonPtr->optValue<uint16_t>("port", DEFAULT_HTTP_SERVER_PORT);
+            m_appConf.httpConf.port = jsonPtr->optValue<uint16_t>("Port", DEFAULT_HTTP_SERVER_PORT);
         }
 
         // TODO: 减少代码重复率
@@ -158,7 +169,8 @@ bool Config::ParseConfFile()
             }
         };
 
-        m_appConf.logLevel = ParseLogLevel(jsonPtr->optValue<std::string>("logLevel", "info"));
+        m_appConf.logLevel = ParseLogLevel(jsonPtr->optValue<std::string>("LogLevel", "info"));
+        m_appConf.autoInterval = jsonPtr->optValue<int>("AutoInterval", AUTO_INTERVAL);
 
         auto apiConfJson         = jsonPtr->getObject("API");
         m_appConf.apiConf.apiKey = apiConfJson->getValue<std::string>("APIKey");

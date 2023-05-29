@@ -40,26 +40,6 @@ Usage:
     /* clang-format on */
 }
 
-bool Option::IsCtlCmd()
-{
-    std::string appName(m_argv[0]);
-    std::string::size_type cmdPos = appName.find("supervisorctl");
-    // 当进程的名称不包含"supervisorctl"时
-    if (cmdPos == std::string::npos) {
-        // 需要两个命令行参数
-        if (m_argc < 2) {
-            return false;
-        }
-        // 第二个命令行参数必须是"ctl"
-        std::string command(m_argv[1]);
-        if (command != "ctl") {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 bool Option::IsDaemon()
 {
     return m_isDaemon;
@@ -92,10 +72,6 @@ int Option::ParseLogLevel(const std::string& levelStr)
 
 int Option::Process()
 {
-    if (IsCtlCmd()) {
-        return 1;
-    }
-
     enum {
         OPTION_DAEMON,
     };
@@ -107,6 +83,7 @@ int Option::Process()
         {"config",    required_argument, nullptr,           'c'}, // 设置配置文件路径
         {"web",       required_argument, nullptr,           'w'}, // 设置前端页面的资源根目录
         {"debug",           no_argument, nullptr,           'd'}, // 降低日志等级
+        {"auto",            no_argument, nullptr,           'a'}, // 是否自动
         {"log-level", required_argument, nullptr,           'l'}, // 设置日志等级
         {"output",    required_argument, nullptr,           'o'}, // 设置日志输出文件路径
         {"version",         no_argument, nullptr,           'v'}, // 打印版本号
@@ -115,10 +92,14 @@ int Option::Process()
     };
     /* clang-format on */
 
-    char pattern[] = "do:l:p:c:w:vh";
+    char pattern[] = "ado:l:p:c:w:vh";
     int  opChar    = getopt_long(m_argc, m_argv, pattern, options, nullptr);
     while (opChar != -1) {
         switch (opChar) {
+            case 'a': {
+                Config::Instance().SetAuto(true);
+            }
+
             case OPTION_DAEMON: {
                 m_isDaemon = true;
                 break;

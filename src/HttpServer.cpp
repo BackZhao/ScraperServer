@@ -13,9 +13,21 @@ int HTTPServerApp::m_signum = -1;
 
 void HTTPServerApp::AutoUpdate()
 {
+    static auto lastUpdateTime = std::chrono::steady_clock::time_point::min();
+    // std::cout << lastUpdateTime.time_since_epoch().count() << std::endl;
+    // std::cout << std::chrono::steady_clock::now().time_since_epoch().count() << std::endl;
+    // std::cout << (std::chrono::steady_clock::now() - lastUpdateTime).count() << std::endl;
+    // auto i = std::chrono::steady_clock::now() - lastUpdateTime;
+
     while (m_signum == -1) {
-        ApiManager::Instance().AutoUpdateTV();
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        // std::cout << (std::chrono::steady_clock::now() - lastUpdateTime).count() << std::endl;
+        if (std::chrono::steady_clock::now() > lastUpdateTime +
+            std::chrono::seconds(Config::Instance().GetAutoInterval())) {
+            ApiManager::Instance().ScanAll();
+            ApiManager::Instance().AutoUpdateTV();
+            lastUpdateTime = std::chrono::steady_clock::now();
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
@@ -51,15 +63,18 @@ int HTTPServerApp::run()
     LOG_INFO("Listening on port: {}", m_httpServer->port());
     m_httpServer->start();
 
-    // 启动Manager的刷新线程
-    m_managerRefreshThread = std::thread(std::bind(&HTTPServerApp::AutoUpdate, this));
+    // 启动自动刮削线程
+    if (Config::Instance().IsAuto()) {
+        m_autoUpdateThread = std::thread(std::bind(&HTTPServerApp::AutoUpdate, this));
+    }
+
     m_signalHandleThread   = std::thread(std::bind(&HTTPServerApp::WaitingSignal, this));
 
-    // 初始化Manager
-
     // 回收线程资源
-    m_managerRefreshThread.join();
     m_signalHandleThread.join();
+    if (Config::Instance().IsAuto()) {
+        m_autoUpdateThread.join();
+    }
 
     // 停止HTTP服务器
     m_httpServer->stopAll();

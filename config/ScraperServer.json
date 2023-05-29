@@ -1,6 +1,7 @@
 {
-    "port": 54250,
-    "logLevel": "info",
+    "Port": 54250,
+    "LogLevel": "info",
+    "AutoInterval": 30,
     "API": {
         "APIKey": "dd1e95388b7b0650d53f3cf91b44c743",
         "URLs": {

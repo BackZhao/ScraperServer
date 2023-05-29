@@ -32,14 +32,6 @@ public:
      */
     bool IsDaemon();
 
-    /**
-     * @brief 判断是否为控制命令
-     *
-     * @return true 是
-     * @return false 否
-     */
-    bool IsCtlCmd();
-
 private:
 
     /**

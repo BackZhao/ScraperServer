@@ -54,6 +54,8 @@ public:
 
     void SetScanPaths(std::map<VideoType, std::vector<std::string>> paths);
 
+    void ScanAll();
+
     void ProcessScan(VideoType videoType);
     void Scan(const Poco::JSON::Object &param, std::ostream &out);
     void ScanResult(const Poco::JSON::Object &param, std::ostream &out);
@@ -65,6 +67,7 @@ private:
 
     ApiManager()
     {
+        // 初始化map
         m_videoInfos = {
             {MOVIE, std::vector<VideoInfo>()},
             {MOVIE_SET, std::vector<VideoInfo>()},

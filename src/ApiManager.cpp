@@ -53,6 +53,15 @@ void ApiManager::Scan(const Poco::JSON::Object &param, std::ostream &out)
     out << R"({"success": true, "msg": "Begin scanning!"})";
 }
 
+void ApiManager::ScanAll()
+{
+    for (int videoType = MOVIE; videoType < UNKNOWN_TYPE; videoType++) {
+        if (m_paths.find(static_cast<VideoType>(videoType)) != m_paths.end()) {
+            ProcessScan(static_cast<VideoType>(videoType));
+        }
+    }
+}
+
 void ApiManager::ScanResult(const Poco::JSON::Object &param, std::ostream &out)
 {
     Poco::JSON::Array outJsonArr;

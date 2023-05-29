@@ -77,6 +77,8 @@ struct AppConf {
     std::string    logFile;
     ApiConf        apiConf;
     DataSourceConf dataSourceConf;
+    int            autoInterval; // 自动刮削的间隔
+    bool           isAuto; // 是否为自动刮削模式
 };
 
 class Config
@@ -120,6 +122,13 @@ public:
     void SetLogLevel(int logLevel);
 
     /**
+     * @brief 设置是否为自动刮削模式
+     *
+     * @param isAuto 是否开启自动刮削
+     */
+    void SetAuto(bool isAuto);
+
+    /**
      * @brief 降低日志等级
      *
      */
@@ -153,6 +162,21 @@ public:
      */
     std::string GetLogFile();
 
+    /**
+     * @brief 获取自动刮削的时间间隔
+     * 
+     * @return int 自动刮削的时间间隔
+     */
+    int GetAutoInterval();
+
+    /**
+     * @brief 是否开启了自动刮削
+     *
+     * @return true 是
+     * @return false 否
+     */
+    bool IsAuto();
+
     const std::map<VideoType, std::vector<std::string>>& GetPaths();
 
     const std::string& GetApiUrl(ApiUrlType apiUrlType);
@@ -172,10 +196,11 @@ private:
      */
     Config()
     {
+        m_appConf.isAuto                  = false;
         m_appConf.httpConf.port           = 0;
         m_appConf.logLevel                = 2; // spdlog::level::info
         m_appConf.apiConf.downloadTimeout = 15;
-        m_appConf.apiConf.jsonTimeout = 5;
+        m_appConf.apiConf.jsonTimeout     = 5;
     };
 
     /**
