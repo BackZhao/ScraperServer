@@ -8,6 +8,8 @@ project(
 
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/modules)
 
+set(CMAKE_CXX_STANDARD 11)
+
 # fetch content
 include(FetchContent)
 
