@@ -2,8 +2,6 @@
 
 #include "Config.h"
 
-#include <getopt.h>
-
 class Option
 {
 public:

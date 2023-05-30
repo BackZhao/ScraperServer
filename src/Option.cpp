@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <climits>
 
+#include <getopt.h>
+
 #include <version.h>
 
 int ParseOption()
