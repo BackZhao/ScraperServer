@@ -25,7 +25,8 @@ jobs:
         run: cmake --build build/native --verbose
       - name: CMake package
         run: cmake --build build/native --target package
-      - uses: actions/upload-artifact@v3
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
           name: my-artifact
           path: build/native/*.tar.gz
