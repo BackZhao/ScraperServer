@@ -167,4 +167,5 @@ void ApiManager::AutoUpdateTV()
             }
         }
     }
+    LOG_DEBUG("Search finished.");
 }

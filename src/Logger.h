@@ -5,12 +5,12 @@
 const size_t DEFAULT_LOGFILE_SIZE  = 5UL * 1024UL * 1024UL; // 默认的日志文件大小, 5MiB
 const size_t DEFAULT_LOGFILE_COUNT = 3UL;                   // 默认滚动的日志文件个数, 3个
 
-#define LOG_CRITICAL(...) Logger::Log(__FILE__, __LINE__, spdlog::level::critical, __VA_ARGS__);
-#define LOG_ERROR(...) Logger::Log(__FILE__, __LINE__, spdlog::level::err, __VA_ARGS__);
-#define LOG_WARN(...) Logger::Log(__FILE__, __LINE__, spdlog::level::warn, __VA_ARGS__);
-#define LOG_INFO(...) Logger::Log(__FILE__, __LINE__, spdlog::level::info, __VA_ARGS__);
-#define LOG_DEBUG(...) Logger::Log(__FILE__, __LINE__, spdlog::level::debug, __VA_ARGS__);
-#define LOG_TRACE(...) Logger::Log(__FILE__, __LINE__, spdlog::level::trace, __VA_ARGS__);
+#define LOG_CRITICAL(...) Logger::Log(__FILE__, __LINE__, spdlog::level::critical, __VA_ARGS__)
+#define LOG_ERROR(...) Logger::Log(__FILE__, __LINE__, spdlog::level::err, __VA_ARGS__)
+#define LOG_WARN(...) Logger::Log(__FILE__, __LINE__, spdlog::level::warn, __VA_ARGS__)
+#define LOG_INFO(...) Logger::Log(__FILE__, __LINE__, spdlog::level::info, __VA_ARGS__)
+#define LOG_DEBUG(...) Logger::Log(__FILE__, __LINE__, spdlog::level::debug, __VA_ARGS__)
+#define LOG_TRACE(...) Logger::Log(__FILE__, __LINE__, spdlog::level::trace, __VA_ARGS__)
 
 /**
  * @brief 日志记录器

@@ -15,6 +15,8 @@ void HTTPServerApp::AutoUpdate()
 {
     static auto lastUpdateTime = std::chrono::steady_clock::time_point::min();
 
+    LOG_INFO("Auto update interval: {}s", Config::Instance().GetAutoInterval());
+
     while (m_signum == -1) {
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {

@@ -98,7 +98,7 @@ bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum)
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_SEASON_DETAIL);
     if (ReplaceString(uriStr, "{tv_id}", std::to_string(tmdbId)) <= 0) {
-        LOG_ERROR("Invalid api format for geting season detail(need contain {tv_id}): {}", uriStr)
+        LOG_ERROR("Invalid api format for geting season detail(need contain {tv_id}): {}", uriStr);
         return false;
     }
     uriStr += std::to_string(seasonNum);
@@ -157,7 +157,7 @@ bool UpdateTV(VideoInfo& videoInfo)
     }
 
     if (!WriteEpisodeNfo(episodesJsonArr, videoInfo.videoDetail.episodePaths)) {
-        LOG_ERROR("Write episode nfos failed!")
+        LOG_ERROR("Write episode nfos failed!");
         return false;
     } else {
         // 如果写入成功, 需要即时更新, 否则剧集nfo个数未更新会导致反复写入新剧集的nfo
