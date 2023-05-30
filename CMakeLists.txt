@@ -9,6 +9,9 @@ project(
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/modules)
 
 set(CMAKE_CXX_STANDARD 11)
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
 
 # fetch content
 include(FetchContent)
