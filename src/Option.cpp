@@ -28,16 +28,12 @@ Options:
     -w, --web <arg>       Set the root directory for web resources
     -l, --log-level <arg> Set the log level, default: info, optional input(case insensitive):
                           critical/c, error/e, warn/w, info/i, debug/d, trace/t
+    -a, --auto            Enable the auto updating
     -d, --debug           Decrease the log level from info
     -o, --output <arg>    Set the log saving file path
     -h, --help            Print this help
     -v, --version         Print version of software
         --daemon          Run as daemon
-
-Usage:
-    supervisor ctl <control command> [watcher name]
-
-    Use "supervisor ctl -h" to see details for control commands.
 )";
     /* clang-format on */
 }
