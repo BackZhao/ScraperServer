@@ -14,13 +14,8 @@ int HTTPServerApp::m_signum = -1;
 void HTTPServerApp::AutoUpdate()
 {
     static auto lastUpdateTime = std::chrono::steady_clock::time_point::min();
-    // std::cout << lastUpdateTime.time_since_epoch().count() << std::endl;
-    // std::cout << std::chrono::steady_clock::now().time_since_epoch().count() << std::endl;
-    // std::cout << (std::chrono::steady_clock::now() - lastUpdateTime).count() << std::endl;
-    // auto i = std::chrono::steady_clock::now() - lastUpdateTime;
 
     while (m_signum == -1) {
-        // std::cout << (std::chrono::steady_clock::now() - lastUpdateTime).count() << std::endl;
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {
             ApiManager::Instance().ScanAll();
