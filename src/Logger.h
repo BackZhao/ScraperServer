@@ -5,12 +5,12 @@
 const size_t DEFAULT_LOGFILE_SIZE  = 5UL * 1024UL * 1024UL; // 默认的日志文件大小, 5MiB
 const size_t DEFAULT_LOGFILE_COUNT = 3UL;                   // 默认滚动的日志文件个数, 3个
 
-#define LOG_CRITICAL(...) Logger::Log(__FILE__, __LINE__, spdlog::level::critical, __VA_ARGS__)
-#define LOG_ERROR(...) Logger::Log(__FILE__, __LINE__, spdlog::level::err, __VA_ARGS__)
-#define LOG_WARN(...) Logger::Log(__FILE__, __LINE__, spdlog::level::warn, __VA_ARGS__)
-#define LOG_INFO(...) Logger::Log(__FILE__, __LINE__, spdlog::level::info, __VA_ARGS__)
-#define LOG_DEBUG(...) Logger::Log(__FILE__, __LINE__, spdlog::level::debug, __VA_ARGS__)
-#define LOG_TRACE(...) Logger::Log(__FILE__, __LINE__, spdlog::level::trace, __VA_ARGS__)
+#define LOG_CRITICAL(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::critical, __VA_ARGS__)
+#define LOG_ERROR(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::err, __VA_ARGS__)
+#define LOG_WARN(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::warn, __VA_ARGS__)
+#define LOG_INFO(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::info, __VA_ARGS__)
+#define LOG_DEBUG(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::debug, __VA_ARGS__)
+#define LOG_TRACE(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::trace, __VA_ARGS__)
 
 /**
  * @brief 日志记录器
@@ -37,7 +37,7 @@ public:
      * @return true 初始化成功
      * @return false 初始化失败
      */
-    static bool Init(spdlog::level::level_enum level,
+    bool Init(spdlog::level::level_enum level,
                      const std::string&        logFile  = "",
                      size_t                    maxSize  = DEFAULT_LOGFILE_SIZE,
                      size_t                    maxCount = DEFAULT_LOGFILE_COUNT);
@@ -53,7 +53,7 @@ public:
      * @param args 日志参数
      */
     template <typename... Args>
-    static void Log(const char* file, int line, spdlog::level::level_enum level, const std::string& fmt, Args&&... args)
+    void Log(const char* file, int line, spdlog::level::level_enum level, const std::string& fmt, Args&&... args)
     {
         m_logger->log(spdlog::source_loc{file, line, ""}, level, fmt, std::forward<Args>(args)...);
     }
@@ -66,5 +66,5 @@ private:
      */
     Logger(){};
 
-    static std::shared_ptr<spdlog::logger> m_logger; // spdlog的日志日志记录器
+    std::shared_ptr<spdlog::logger> m_logger; // spdlog的日志日志记录器
 };

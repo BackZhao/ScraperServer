@@ -3,8 +3,6 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-std::shared_ptr<spdlog::logger> Logger::m_logger; // TODO: 静态成员变量是否有必要?
-
 Logger& Logger::Instance()
 {
     static Logger self;

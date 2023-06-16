@@ -18,8 +18,8 @@ int main(int argc, char* argv[])
     }
 
     // 初始化日志记录器
-    if (!Logger::Init(static_cast<spdlog::level::level_enum>(Config::Instance().GetLogLevel()),
-                      Config::Instance().GetLogFile())) {
+    if (!Logger::Instance().Init(static_cast<spdlog::level::level_enum>(Config::Instance().GetLogLevel()),
+                                 Config::Instance().GetLogFile())) {
         return 1;
     }
 
