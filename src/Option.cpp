@@ -90,12 +90,13 @@ int Option::Process()
     };
     /* clang-format on */
 
-    char pattern[] = "ado:l:p:c:w:vh";
+    char pattern[] = "p:c:w:dal:o:vh";
     int  opChar    = getopt_long(m_argc, m_argv, pattern, options, nullptr);
     while (opChar != -1) {
         switch (opChar) {
             case 'a': {
                 Config::Instance().SetAuto(true);
+                break;
             }
 
             case OPTION_DAEMON: {
