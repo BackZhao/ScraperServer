@@ -4,13 +4,6 @@
 #include <utility>
 #include <fstream>
 
-#ifdef SYLIXOS
-#include <kernel/include/k_api.h>
-#elif not defined _WIN32
-#include <sys/reboot.h>
-#include <unistd.h>
-#endif
-
 #include <Poco/File.h>
 #include <Poco/FileStream.h>
 #include <Poco/Net/HTMLForm.h>
