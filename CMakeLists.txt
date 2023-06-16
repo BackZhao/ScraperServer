@@ -20,6 +20,60 @@ include(FetchContent)
 include(AddVersionMacro)
 add_version_macro(${PROJECT_NAME})
 
+# AddressSanitizer requirement: Clang>=3.1 | GCC>=4.8
+option(XXX_ENABLE_ASAN "Run AddressSanitizer" OFF)
+add_library(asan_flags INTERFACE)
+if(XXX_ENABLE_ASAN)
+  if(MSVC)
+    set(asan_flags /fsanitize=address)
+    target_compile_options(asan_flags INTERFACE ${asan_flags})
+    target_link_options(asan_flags INTERFACE ${asan_flags})
+  else()
+    set(asan_flags -fno-omit-frame-pointer -fsanitize=address)
+    target_compile_options(
+      asan_flags INTERFACE # $<$<CONFIG:Debug>:${asan_flags}>
+                           ${asan_flags}
+      )
+    target_link_options(
+      asan_flags INTERFACE
+      # $<$<CONFIG:Debug>:${asan_flags}>
+      ${asan_flags}
+      )
+  endif()
+endif()
+
+# compile flags
+include(AddCompileFlags)
+add_compile_flags(${PROJECT_NAME} c_std_11 cxx_std_11)
+
+if(MSVC)
+  target_compile_options(${compile_flags} INTERFACE /utf-8)
+  target_compile_definitions(${compile_flags} INTERFACE _CRT_SECURE_NO_WARNINGS)
+
+  if("${CMAKE_CL_NOLOGO}" STREQUAL "")
+    target_compile_options(${compile_flags} INTERFACE /nologo)
+    target_link_options(${compile_flags} INTERFACE /nologo)
+  endif()
+else()
+  target_compile_options(
+    ${compile_flags}
+    INTERFACE -Wall
+              -Wextra
+              -Wshadow
+              -Wformat=2
+              -Wno-write-strings
+              $<$<COMPILE_LANGUAGE:C>:-Werror=implicit-function-declaration>
+              $<$<COMPILE_LANGUAGE:CXX>:-Wno-missing-field-initializers>
+    )
+endif()
+target_compile_definitions(${compile_flags} INTERFACE _FILE_OFFSET_BITS=64)
+
+target_include_directories(
+  ${compile_flags} INTERFACE "${CMAKE_CURRENT_LIST_DIR}/protocol"
+                              "${CMAKE_CURRENT_LIST_DIR}/src"
+  )
+target_link_libraries(${compile_flags} INTERFACE asan_flags)
+
 # getopt
 if(NOT TARGET getopt)
 if(WIN32)
@@ -161,7 +215,7 @@ add_executable(Demo
 target_link_libraries(Demo
   PRIVATE
     ${version_macro}
-    # DataSource
+    ${compile_flags}
     Logger
     Config
     Option
@@ -182,7 +236,7 @@ add_executable(ScraperServer
 target_link_libraries(ScraperServer
   PRIVATE
     ${version_macro}
-    # DataSource
+    ${compile_flags}
     Logger
     Config
     Option
