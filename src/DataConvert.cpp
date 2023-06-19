@@ -195,8 +195,9 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     }
 
     // 获取根节点
-    auto dom         = DOMParser().parse(videoInfo.nfoPath);
-    AutoPtr<Element> rootElement = dom->documentElement();
+    DOMParser         parser;
+    AutoPtr<Document> dom         = parser.parse(videoInfo.nfoPath);
+    auto              rootElement = dom->documentElement();
 
     videoInfo.videoDetail.title         = rootElement->getNodeByPath("/title")->innerText();
     videoInfo.videoDetail.originaltitle = rootElement->getNodeByPath("/originaltitle")->innerText();
@@ -217,12 +218,12 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     videoInfo.videoDetail.plot     = rootElement->getNodeByPath("/plot")->innerText();
     videoInfo.videoDetail.uniqueid = std::stoi(rootElement->getNodeByPath("/uniqueid")->innerText());
 
-    auto genreNodes = rootElement->getElementsByTagName("genre");
+    AutoPtr<NodeList> genreNodes = rootElement->getElementsByTagName("genre");
     for (uint32_t i = 0; i < genreNodes->length(); i++) {
         videoInfo.videoDetail.genre.push_back(genreNodes->item(i)->innerText());
     }
 
-    auto countryNodes = rootElement->getElementsByTagName("country");
+    AutoPtr<NodeList> countryNodes = rootElement->getElementsByTagName("country");
     for (uint32_t i = 0; i < countryNodes->length(); i++) {
         videoInfo.videoDetail.countries.push_back(countryNodes->item(i)->innerText());
     }
@@ -231,7 +232,7 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     videoInfo.videoDetail.premiered = rootElement->getNodeByPath("/premiered")->innerText();
     videoInfo.videoDetail.studio    = rootElement->getNodeByPath("/studio")->innerText();
 
-    auto actorNodes = rootElement->getElementsByTagName("actor");
+    AutoPtr<NodeList> actorNodes = rootElement->getElementsByTagName("actor");
     for (uint32_t i = 0; i < actorNodes->length(); i++) {
         ActorDetail actor{
             actorNodes->item(i)->getNodeByPath("/name")->innerText(),
