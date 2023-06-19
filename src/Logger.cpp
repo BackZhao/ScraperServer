@@ -34,5 +34,7 @@ bool Logger::Init(spdlog::level::level_enum level, const std::string& logFile, s
     m_logger->set_level(level);
     m_logger->set_pattern(pattern);
 
+    // FIXME: daemon下无法刷新日志文件
+
     return true;
 }
