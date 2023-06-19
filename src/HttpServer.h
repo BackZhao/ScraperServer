@@ -66,16 +66,9 @@ private:
      */
     void AutoUpdate();
 
-    /**
-     * @brief 等待捕获信号
-     *
-     */
-    void WaitingSignal();
-
 private:
 
     static int             m_signum;             // 程序捕获到的信号
     Poco::Net::HTTPServer* m_httpServer;         // HTTP服务器
     std::thread            m_autoUpdateThread;   // 自动刮削线程
-    std::thread            m_signalHandleThread; // 信号处理线程
 };
