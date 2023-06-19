@@ -11,7 +11,18 @@
 
 #include <fstream>
 
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif // WIN32
+
 #include "version.h"
+
+void shutdown()
+{
+    spdlog::shutdown();
+}
 
 int main(int argc, char* argv[])
 {
@@ -23,8 +34,8 @@ int main(int argc, char* argv[])
     }
 
     // 初始化日志记录器
-    if (!Logger::Init(static_cast<spdlog::level::level_enum>(Config::Instance().GetLogLevel()),
-                      Config::Instance().GetLogFile())) {
+    if (!Logger::Instance().Init(static_cast<spdlog::level::level_enum>(Config::Instance().GetLogLevel()),
+                                 Config::Instance().GetLogFile())) {
         return 1;
     }
 
@@ -35,7 +46,24 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // 是否需要后台运行
+    if (option.IsDaemon()) {
+#ifdef _WIN32
+        HWND hWnd = ::FindWindowA("ConsoleWindowClass", NULL);
+        if (hWnd != NULL) {
+            ::ShowWindow(hWnd, SW_HIDE);
+        }
+#else
+        if (daemon(1, 1) != 0) {
+            perror("daemon");
+            return 1;
+        }
+#endif // WIN32
+    }
+
     ApiManager::Instance().SetScanPaths(Config::Instance().GetPaths());
+
+    atexit(shutdown);
 
     HTTPServerApp app;
     return app.run();
