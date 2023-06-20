@@ -39,6 +39,7 @@ int HTTPServerApp::run()
     // 启动HTTP服务器
     Poco::Net::SocketAddress     addr("[::]:" + std::to_string(Config::Instance().GetPort()));
     Poco::Net::ServerSocket      sock(addr);
+    sock.setReusePort(true);
     Poco::Net::HTTPServerParams* pParams = new Poco::Net::HTTPServerParams;
     pParams->setMaxQueued(100);
     pParams->setMaxThreads(16);
