@@ -7,7 +7,7 @@
         "URLs": {
             "SearchMovie": "http://api.themoviedb.org/3/search/movie",
             "SearchTV": "http://api.themoviedb.org/3/search/tv",
-            "GetMovieCredits": "http://api.themoviedb.org/3/movie/",
+            "GetMovieCredits": "http://api.themoviedb.org/3/movie/{movie_id}/credits",
             "GetMovieDetail": "http://api.themoviedb.org/3/movie/",
             "GetTVCredits": "http://api.themoviedb.org/3/tv/{tv_id}/credits",
             "GetTVDetail": "http://api.themoviedb.org/3/tv/",
