@@ -193,6 +193,32 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
     return true;
 }
 
+template <typename T>
+T GetNodeValByPath(Node* parentNode, const std::string& nodePath, T defaultVal = T())
+{
+    auto childNode = parentNode->getNodeByPath(nodePath);
+    T val = defaultVal;
+    if (childNode != nullptr) {
+        std::istringstream iSS(childNode->innerText());
+        iSS >> val;
+    }
+
+    return val;
+};
+
+template <>
+std::string GetNodeValByPath(Node* parentNode, const std::string& nodePath, std::string defaultVal)
+{
+    auto childNode = parentNode->getNodeByPath(nodePath);
+    std::string    val       = defaultVal;
+    if (childNode != nullptr) {
+        std::istringstream iSS(childNode->innerText());
+        val = iSS.str();
+    }
+
+    return val;
+};
+
 bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
 {
     // NFO文件的状态必须是格式匹配的
@@ -206,31 +232,19 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     AutoPtr<Document> dom         = parser.parse(videoInfo.nfoPath);
     auto              rootElement = dom->documentElement();
 
-    videoInfo.videoDetail.title         = rootElement->getNodeByPath("/title")->innerText();
-    videoInfo.videoDetail.originaltitle = rootElement->getNodeByPath("/originaltitle")->innerText();
+    videoInfo.videoDetail.title         = GetNodeValByPath<std::string>(rootElement, "/title");
+    videoInfo.videoDetail.originaltitle = GetNodeValByPath<std::string>(rootElement, "/originaltitle");
 
     // 有些电视剧可能刮削的时候未填写季编号, 则将其填写为1, 即默认为第一部/季, 未填写是否完结的默认完结
     if (videoInfo.videoType == TV) {
-        auto seasonNumNode = rootElement->getNodeByPath("/season");
-        videoInfo.videoDetail.seasonNumber = seasonNumNode == nullptr ? 1 : std::stoi(seasonNumNode->innerText());
-
-        auto statusNode = rootElement->getNodeByPath("/status");
-        videoInfo.videoDetail.isEnded = ((statusNode == nullptr) ? true : (statusNode->innerText() == "Ended")); 
+        videoInfo.videoDetail.seasonNumber = GetNodeValByPath<int>(rootElement, "/season", 1);
+        videoInfo.videoDetail.isEnded = GetNodeValByPath<std::string>(rootElement, "/status", "Ended") == "Ended" ? true : false;
     }
 
-    auto ratingValueNode = rootElement->getNodeByPath("/ratings/rating/values");
-    if (ratingValueNode == nullptr) {
-        ratingValueNode = rootElement->getNodeByPath("/ratings/rating/value");
-    }
-
-    if (ratingValueNode != nullptr) {
-        videoInfo.videoDetail.ratings.rating = std::stod(ratingValueNode->innerText());
-        videoInfo.videoDetail.ratings.votes =
-            std::stoi(rootElement->getNodeByPath("/ratings/rating/votes")->innerText());
-    }
-
-    videoInfo.videoDetail.plot     = rootElement->getNodeByPath("/plot")->innerText();
-    videoInfo.videoDetail.uniqueid = std::stoi(rootElement->getNodeByPath("/uniqueid")->innerText());
+    videoInfo.videoDetail.ratings.rating = GetNodeValByPath<double>(rootElement, "/ratings/rating/value");
+    videoInfo.videoDetail.ratings.votes  = GetNodeValByPath<int>(rootElement, "/ratings/rating/votes");
+    videoInfo.videoDetail.plot           = GetNodeValByPath<std::string>(rootElement, "/plot");
+    videoInfo.videoDetail.uniqueid       = GetNodeValByPath<int>(rootElement, "/uniqueid");
 
     AutoPtr<NodeList> genreNodes = rootElement->getElementsByTagName("genre");
     for (uint32_t i = 0; i < genreNodes->length(); i++) {
@@ -242,8 +256,8 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
         videoInfo.videoDetail.countries.push_back(countryNodes->item(i)->innerText());
     }
 
-    videoInfo.videoDetail.director  = rootElement->getNodeByPath("/director")->innerText();
-    videoInfo.videoDetail.premiered = rootElement->getNodeByPath("/premiered")->innerText();
+    videoInfo.videoDetail.director  = GetNodeValByPath<std::string>(rootElement, "/director");
+    videoInfo.videoDetail.premiered = GetNodeValByPath<std::string>(rootElement, "/premiered");
 
     AutoPtr<NodeList> studioNodes   = rootElement->getElementsByTagName("studio");
     for (uint32_t i = 0; i < studioNodes->length(); i++) {
@@ -252,12 +266,12 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
 
     AutoPtr<NodeList> actorNodes = rootElement->getElementsByTagName("actor");
     for (uint32_t i = 0; i < actorNodes->length(); i++) {
-        Node* orderNode = actorNodes->item(i)->getNodeByPath("order");
+        auto actorNode = actorNodes->item(i);
         ActorDetail actor{
-            actorNodes->item(i)->getNodeByPath("/name")->innerText(),
-            actorNodes->item(i)->getNodeByPath("/role")->innerText(),
-            orderNode == nullptr ? static_cast<int>(i) : std::stoi(actorNodes->item(i)->getNodeByPath("/order")->innerText()),
-            actorNodes->item(i)->getNodeByPath("/thumb")->innerText(),
+            GetNodeValByPath<std::string>(actorNode, "/name"),
+            GetNodeValByPath<std::string>(actorNode, "/role"),
+            GetNodeValByPath<int>(actorNode, "order", i),
+            GetNodeValByPath<std::string>(actorNode, "/thumb"),
         };
         videoInfo.videoDetail.actors.push_back(actor);
     }
