@@ -187,13 +187,18 @@ void ApiManager::RefreshMovie()
     int failedCount = 0;
     int nfoMisCount = 0;
 
-    for (auto &videoInfo : m_videoInfos.at(MOVIE)) {
-        if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
-            LOG_DEBUG("Nfo file incorrect, skipped: {}", videoInfo.videoPath);
+    for (auto &oldVideoInfo : m_videoInfos.at(MOVIE)) {
+        if (oldVideoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+            LOG_DEBUG("Nfo file incorrect, skipped: {}", oldVideoInfo.videoPath);
             nfoMisCount++;
-            nfoMisVec.push_back(videoInfo.videoPath);
+            nfoMisVec.push_back(oldVideoInfo.videoPath);
             continue;
         }
+
+        // TODO: 后续取消XML全解析即可优化此处
+        VideoInfo videoInfo(oldVideoInfo.videoType, oldVideoInfo.videoPath);
+        videoInfo.nfoPath = oldVideoInfo.nfoPath;
+        videoInfo.videoDetail.uniqueid = oldVideoInfo.videoDetail.uniqueid;
 
         LOG_DEBUG("Refreshing movie nfo: {}", videoInfo.videoPath);
 
@@ -229,7 +234,7 @@ void ApiManager::RefreshMovie()
         LOG_INFO("Progress:\t{}/{}", successCount + failedCount + nfoMisCount, m_videoInfos.at(MOVIE).size());
     }
 
-    printf("Movie refresh summary:\nTotal: %lu\nSuccess: %d\nFailed: %d\nNfoMis: %d",
+    printf("Movie refresh summary:\n\tTotal: %lu\n\tSuccess: %d\n\tFailed: %d\n\tNfoMis: %d\n",
            m_videoInfos.at(MOVIE).size(),
            successCount,
            failedCount,

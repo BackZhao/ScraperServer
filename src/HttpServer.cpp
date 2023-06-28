@@ -52,6 +52,7 @@ int HTTPServerApp::run()
         m_autoUpdateThread = std::thread(std::bind(&HTTPServerApp::AutoUpdate, this));
     }
 
+    // TODO: 扫描时不需要解析XML所有的结构, 只需要解析出TMDBID即可
     ApiManager::Instance().ScanAll();
     ApiManager::Instance().RefreshMovie();
 

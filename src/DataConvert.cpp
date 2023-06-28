@@ -307,7 +307,7 @@ bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDet
 
     auto studioJsonArrPtr = jsonPtr->getArray("production_companies");
     for (std::size_t i = 0; i < studioJsonArrPtr->size(); i++) {
-        videoDetail.studio.push_back(studioJsonArrPtr->getObject(0)->getValue<std::string>("name"));
+        videoDetail.studio.push_back(studioJsonArrPtr->getObject(i)->getValue<std::string>("name"));
     }
 
     return true;
