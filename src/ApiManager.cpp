@@ -152,13 +152,14 @@ void ApiManager::Detail(const Poco::JSON::Object &param, std::ostream &out)
 void ApiManager::AutoUpdateTV()
 {
     if (m_videoInfos.at(TV).empty()) {
-        LOG_WARN("Empty tvs in datasource, scan first or add new!");
+        LOG_WARN("Empty tv show in datasource, scan first or add new!");
         return;
     }
 
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(TV).lock, std::try_to_lock);
+
     LOG_DEBUG("Search for new episodes...");
     for (auto &videoInfo : m_videoInfos.at(TV)) {
-        std::unique_lock<std::mutex> locker(m_scanInfos.at(TV).lock, std::try_to_lock);
         if (!videoInfo.videoDetail.isEnded &&
             videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
             LOG_INFO("Try to auto update tv info {}...", videoInfo.videoPath);
@@ -168,4 +169,86 @@ void ApiManager::AutoUpdateTV()
         }
     }
     LOG_DEBUG("Search finished.");
+}
+
+void ApiManager::RefreshMovie()
+{
+    if (m_videoInfos.at(MOVIE).empty()) {
+        LOG_WARN("Empty movie in datasource, scan first or add new!");
+        return;
+    }
+
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(MOVIE).lock, std::try_to_lock);
+
+    LOG_DEBUG("Refreshing movie nfos...");
+    std::vector<std::string> failedVec;
+    std::vector<std::string> nfoMisVec;
+    int successCount = 0;
+    int failedCount = 0;
+    int nfoMisCount = 0;
+
+    for (auto &videoInfo : m_videoInfos.at(MOVIE)) {
+        if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+            LOG_DEBUG("Nfo file incorrect, skipped: {}", videoInfo.videoPath);
+            nfoMisCount++;
+            nfoMisVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+
+        LOG_DEBUG("Refreshing movie nfo: {}", videoInfo.videoPath);
+
+        std::stringstream sS;
+        if (!GetMovieDetail(sS, videoInfo.videoDetail.uniqueid)) {
+            failedCount++;
+            failedVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+        if (!ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail)) {
+            failedCount++;
+            failedVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+        if (!GetMovieCredits(sS, videoInfo.videoDetail.uniqueid)) {
+            failedCount++;
+            failedVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+        if (!ParseCreditsToVideoDetail(sS, videoInfo.videoDetail)) {
+            failedCount++;
+            failedVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath)) {
+            failedCount++;
+            failedVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+
+        successCount++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        LOG_INFO("Progress:\t{}/{}", successCount + failedCount + nfoMisCount, m_videoInfos.at(MOVIE).size());
+    }
+
+    printf("Movie refresh summary:\nTotal: %lu\nSuccess: %d\nFailed: %d\nNfoMis: %d",
+           m_videoInfos.at(MOVIE).size(),
+           successCount,
+           failedCount,
+           nfoMisCount);
+    printf("Failed videos:\n");
+    for (auto v : failedVec) {
+        printf("\t%s\n", v.c_str());
+    }
+    printf("NfoMis videos:\n");
+    for (auto v : nfoMisVec) {
+        printf("\t%s\n", v.c_str());
+    }
+    LOG_DEBUG("Refresh movie nfos finished.");
+}
+
+void ApiManager::RefreshTV()
+{
+    if (m_videoInfos.at(TV).empty()) {
+        LOG_WARN("Empty tv show in datasource, scan first or add new!");
+        return;
+    }
 }

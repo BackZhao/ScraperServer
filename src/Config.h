@@ -170,6 +170,13 @@ public:
     int GetAutoInterval();
 
     /**
+     * @brief 获取图像下载的质量
+     * 
+     * @return std::string 图像下载质量
+     */
+    std::string GetImageDownloadQuality();
+
+    /**
      * @brief 是否开启了自动刮削
      *
      * @return true 是

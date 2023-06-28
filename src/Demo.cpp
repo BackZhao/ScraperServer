@@ -7,6 +7,8 @@
 #include "ApiManager.h"
 #include "HttpServer.h"
 
+#include "DataConvert.h"
+
 #include "Tmdb.h"
 
 #include <fstream>
@@ -46,6 +48,20 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+
+    // std::stringstream sS;
+    // GetMovieDetail(sS, 739405);
+
+    // VideoInfo videoInfo(MOVIE, "/home/bkzhao/Demo.mkv");
+    // ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail);
+
+    // GetMovieCredits(sS, 739405);
+    // ParseCreditsToVideoDetail(sS, videoInfo.videoDetail);
+    
+    // VideoInfoToNfo(videoInfo, "/home/bkzhao/Demo.nfo");
+
+    // return 0;
+
     // 是否需要后台运行
     if (option.IsDaemon()) {
 #ifdef _WIN32
@@ -54,7 +70,7 @@ int main(int argc, char* argv[])
             ::ShowWindow(hWnd, SW_HIDE);
         }
 #else
-        if (daemon(1, 1) != 0) {
+        if (daemon(1, 0) != 0) {
             perror("daemon");
             return 1;
         }

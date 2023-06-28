@@ -63,6 +63,9 @@ public:
     void Detail(const Poco::JSON::Object &param, std::ostream &out);
     void AutoUpdateTV();
 
+    void RefreshMovie();
+    void RefreshTV();
+
 private:
 
     ApiManager()

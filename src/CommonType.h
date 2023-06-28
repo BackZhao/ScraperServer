@@ -117,7 +117,7 @@ struct VideoDetail {
 
     std::string              title;         // 视频的标题
     std::string              originaltitle; // 视频的原始标题
-    RatingDetail             userrating;    // 视频的用户评分
+    RatingDetail             ratings;       // 视频的用户评分
     std::string              plot;          // 视频的剧情介绍
     int                      uniqueid;      // 视频的唯一ID, 这里指定为TMDB的ID
     std::vector<std::string> genre;         // 视频的分类
@@ -125,7 +125,7 @@ struct VideoDetail {
     std::vector<std::string> credits;       // 视频的编剧
     std::string              director;      // 视频的导演
     std::string              premiered;     // 视频的首播日期
-    std::string              studio;        // 视频的制片厂
+    std::vector<std::string> studio;        // 视频的制片厂
     std::vector<ActorDetail> actors;        // 视频的演员信息
 
     // 电视剧专属

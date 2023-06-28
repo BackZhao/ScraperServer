@@ -14,6 +14,54 @@
 
 using namespace Poco::JSON;
 
+static std::size_t ReplaceString(std::string& inout, const std::string& what, const std::string& with)
+{
+    std::size_t count{};
+    for (std::string::size_type pos{}; inout.npos != (pos = inout.find(what.data(), pos, what.length()));
+         pos += with.length(), ++count) {
+        inout.replace(pos, what.length(), with.data(), with.length());
+    }
+    return count;
+}
+
+bool SendRequest(std::ostream& out, Poco::URI& uri)
+{
+    Poco::Net::HTTPRequest       request;
+    Poco::Net::HTTPResponse      response;
+    Poco::Net::HTTPClientSession session;
+
+    // 设置访问的各项参数
+    std::string path(uri.getPathAndQuery());
+    if (path.empty()) {
+        path = "/";
+    }
+    session.setHost(uri.getHost());
+    session.setPort(uri.getPort());
+    request.setMethod(Poco::Net::HTTPRequest::HTTP_GET);
+    request.setURI(path);
+    request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
+
+    try {
+        session.sendRequest(request);
+        auto& rs = session.receiveResponse(response);
+        // 响应码必须为200
+        if (response.getStatus() != Poco::Net::HTTPResponse::HTTP_OK) {
+            LOG_ERROR("Response status code is {} for {}", response.getStatus(), uri.toString());
+            std::string responseStr;
+            Poco::StreamCopier::copyToString(rs, responseStr);
+            LOG_ERROR("Response content is:\n{}", responseStr);
+            return false;
+        } else {
+            Poco::StreamCopier::copyStream(rs, out);
+        }
+    } catch (Poco::Exception& e) {
+        LOG_ERROR("Send request failed for uri {} : ", e.displayText());
+        return false;
+    }
+
+    return true;
+}
+
 bool Search(std::ostream& out, VideoType VideoType, const std::string& keywords, const std::string& year)
 {
     // 拼接访问的URL
@@ -29,26 +77,20 @@ bool Search(std::ostream& out, VideoType VideoType, const std::string& keywords,
     }
     LOG_DEBUG("Search uri is: {}", uri.toString());
 
-    Poco::Net::HTTPRequest request;
-    Poco::Net::HTTPResponse response;
-    Poco::Net::HTTPClientSession session;
+    return SendRequest(out, uri);
+}
 
-    // 设置访问的各项参数
-    std::string path(uri.getPathAndQuery());
-    if (path.empty()) {
-        path = "/";
-    }
-    session.setHost(uri.getHost());
-    session.setPort(uri.getPort());
-    request.setMethod(Poco::Net::HTTPRequest::HTTP_GET);
-    request.setURI(path);
-    request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
-    session.sendRequest(request);
+bool GetMovieDetail(std::ostream& out, int tmdbId)
+{
+    // 拼接访问的URL
+    std::string uriStr = Config::Instance().GetApiUrl(GET_MOVIE_DETAIL) + std::to_string(tmdbId);
 
-    auto& rs = session.receiveResponse(response);
-    Poco::StreamCopier::copyStream(rs, out);
+    Poco::URI uri(uriStr);
+    uri.addQueryParameter("api_key", Config::Instance().GetApiKey());
+    uri.addQueryParameter("language", "zh-cn");
+    LOG_DEBUG("Get movie detail uri is: {}", uri.toString());
 
-    return true;
+    return SendRequest(out, uri);
 }
 
 bool GetTvDetail(std::ostream& out, int tmdbId)
@@ -61,36 +103,7 @@ bool GetTvDetail(std::ostream& out, int tmdbId)
     uri.addQueryParameter("language", "zh-cn");
     LOG_DEBUG("Get tv detail uri is: {}", uri.toString());
 
-    Poco::Net::HTTPRequest       request;
-    Poco::Net::HTTPResponse      response;
-    Poco::Net::HTTPClientSession session;
-
-    // 设置访问的各项参数
-    std::string path(uri.getPathAndQuery());
-    if (path.empty()) {
-        path = "/";
-    }
-    session.setHost(uri.getHost());
-    session.setPort(uri.getPort());
-    request.setMethod(Poco::Net::HTTPRequest::HTTP_GET);
-    request.setURI(path);
-    request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
-    session.sendRequest(request);
-
-    auto& rs = session.receiveResponse(response);
-    Poco::StreamCopier::copyStream(rs, out);
-
-    return true;
-}
-
-std::size_t ReplaceString(std::string& inout, const std::string& what, const std::string& with)
-{
-    std::size_t count{};
-    for (std::string::size_type pos{}; inout.npos != (pos = inout.find(what.data(), pos, what.length()));
-         pos += with.length(), ++count) {
-        inout.replace(pos, what.length(), with.data(), with.length());
-    }
-    return count;
+    return SendRequest(out, uri);
 }
 
 bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum)
@@ -108,27 +121,24 @@ bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum)
     uri.addQueryParameter("language", "zh-cn");
     LOG_DEBUG("Get season detail uri is: {}", uri.toString());
 
-    Poco::Net::HTTPRequest       request;
-    Poco::Net::HTTPResponse      response;
-    Poco::Net::HTTPClientSession session;
+    return SendRequest(out, uri);
+}
 
-    // 设置访问的各项参数
-    std::string path(uri.getPathAndQuery());
-    if (path.empty()) {
-        path = "/";
+bool GetMovieCredits(std::ostream& out, int tmdbId)
+{
+    // 拼接访问的URL
+    std::string uriStr = Config::Instance().GetApiUrl(GET_MOVIE_CREDITS);
+    if (ReplaceString(uriStr, "{movie_id}", std::to_string(tmdbId)) <= 0) {
+        LOG_ERROR("Invalid api format for geting movie credits(need contain {movie_id}): {}", uriStr);
+        return false;
     }
-    session.setHost(uri.getHost());
-    session.setPort(uri.getPort());
-    request.setMethod(Poco::Net::HTTPRequest::HTTP_GET);
-    request.setURI(path);
-    request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
-    session.sendRequest(request);
 
-    auto& rs = session.receiveResponse(response);
-    Poco::StreamCopier::copyStream(rs, out);
-    Poco::StreamCopier::copyStream(rs, std::cout);
+    Poco::URI uri(uriStr);
+    uri.addQueryParameter("api_key", Config::Instance().GetApiKey());
+    uri.addQueryParameter("language", "zh-cn");
+    LOG_DEBUG("Get movie credits uri is: {}", uri.toString());
 
-    return true;
+    return SendRequest(out, uri);
 }
 
 bool UpdateTV(VideoInfo& videoInfo)
@@ -144,10 +154,10 @@ bool UpdateTV(VideoInfo& videoInfo)
         return false;
     }
 
-    Parser parser;
+    Parser      parser;
     auto        result          = parser.parse(seasonDetailStream);
-    Object::Ptr jsonPtr = result.extract<Object::Ptr>();
-    auto episodesJsonArr = jsonPtr->getArray("episodes");
+    Object::Ptr jsonPtr         = result.extract<Object::Ptr>();
+    auto        episodesJsonArr = jsonPtr->getArray("episodes");
 
     // TODO: 当TMDB API剧集数量尚未更新时, 使用默认标题
     if (episodesJsonArr->size() < videoInfo.videoDetail.episodePaths.size()) {
@@ -182,3 +192,4 @@ bool UpdateTV(VideoInfo& videoInfo)
 
     return true;
 }
+

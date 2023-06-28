@@ -93,6 +93,11 @@ int Config::GetAutoInterval()
     return m_appConf.autoInterval;
 }
 
+std::string Config::GetImageDownloadQuality()
+{
+    return m_appConf.apiConf.imageDownloadQuality;
+}
+
 bool Config::IsAuto()
 {
     return m_appConf.isAuto;

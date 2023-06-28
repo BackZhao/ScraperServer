@@ -28,6 +28,10 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath);
  */
 bool ParseNfoToVideoInfo(VideoInfo& videoInfo);
 
+bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
+
+bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
+
 /**
  * @brief 
  * 

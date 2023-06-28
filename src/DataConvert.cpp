@@ -1,6 +1,8 @@
 #include "DataConvert.h"
 
+#include "Config.h"
 #include "Logger.h"
+#include "iso-3611-1.h"
 
 #include <fstream>
 
@@ -13,11 +15,13 @@
 #include <Poco/XML/XMLWriter.h>
 #include <Poco/DOM/Text.h>
 #include <Poco/Path.h>
+#include <Poco/JSON/Parser.h>
 
 using Poco::AutoPtr;
 using namespace Poco::XML;
+using namespace Poco::JSON;
 
-void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::Object& outJson)
+void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Object& outJson)
 {
     outJson.set("Id", id);
     outJson.set("VideoType", VIDEO_TYPE_TO_STR.at(videoInfo.videoType));
@@ -28,37 +32,37 @@ void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::O
     outJson.set("PosterPath", videoInfo.posterPath);
 }
 
-void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::Object& outJson)
+void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Object& outJson)
 {
     VideoInfoToBriefJson(id, videoInfo, outJson);
 
     // 如果NFO文件格式匹配, 则额外填写NFO的信息
     if (videoInfo.nfoStatus == NFO_FORMAT_MATCH) {
-        Poco::JSON::Object videoDetailJson;
+        Object videoDetailJson;
         videoDetailJson.set("Title", videoInfo.videoDetail.title);
         videoDetailJson.set("OriginalTitle", videoInfo.videoDetail.originaltitle);
 
-        Poco::JSON::Object userRatingJson;
-        userRatingJson.set("Rating", videoInfo.videoDetail.userrating.rating);
-        userRatingJson.set("Votes", videoInfo.videoDetail.userrating.votes);
-        videoDetailJson.set("UserRating", userRatingJson);
+        Object ratingsJson;
+        ratingsJson.set("Rating", videoInfo.videoDetail.ratings.rating);
+        ratingsJson.set("Votes", videoInfo.videoDetail.ratings.votes);
+        videoDetailJson.set("Ratings", ratingsJson);
 
         videoDetailJson.set("Plot", videoInfo.videoDetail.plot);
         videoDetailJson.set("Uniqueid", videoInfo.videoDetail.uniqueid);
 
-        Poco::JSON::Array genreArrJson;
+        Array genreArrJson;
         for (const auto& genre : videoInfo.videoDetail.genre) {
             genreArrJson.add(genre);
         }
         videoDetailJson.set("Genre", genreArrJson);
 
-        Poco::JSON::Array contriesArrJson;
+        Array contriesArrJson;
         for (const auto& country : videoInfo.videoDetail.countries) {
             contriesArrJson.add(country);
         }
         videoDetailJson.set("Countries", contriesArrJson);
 
-        Poco::JSON::Array creditsArrJson;
+        Array creditsArrJson;
         for (const auto& credit : videoInfo.videoDetail.credits) {
             creditsArrJson.add(credit);
         }
@@ -68,9 +72,9 @@ void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON
         videoDetailJson.set("Premiered", videoInfo.videoDetail.premiered);
         videoDetailJson.set("Studio", videoInfo.videoDetail.studio);
 
-        Poco::JSON::Array actorsArrJson;
+        Array actorsArrJson;
         for (const auto& actor : videoInfo.videoDetail.actors) {
-            Poco::JSON::Object actorJson;
+            Object actorJson;
             actorJson.set("name", actor.name);
             actorJson.set("role", actor.role);
             // actorJson.set("order", actor.order);
@@ -85,7 +89,7 @@ void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON
             videoDetailJson.set("Status", videoInfo.videoDetail.isEnded ? "Ended" : "Continuing");
                 videoDetailJson.set("EpisodeNfoCount", videoInfo.videoDetail.episodeNfoCount);
             videoDetailJson.set("EpisodeCount", videoInfo.videoDetail.episodePaths.size());
-            Poco::JSON::Array episodePathsArrJson;
+            Array episodePathsArrJson;
             for (const auto& episodePath : videoInfo.videoDetail.episodePaths) {
                 episodePathsArrJson.add(episodePath);
             }
@@ -125,7 +129,6 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
     };
 
     createAndAppendText(rootEle, "title", videoInfo.videoDetail.title);
-    createAndAppendText(rootEle, "season", std::to_string(videoInfo.videoDetail.seasonNumber));
     createAndAppendText(rootEle, "originaltitle", videoInfo.videoDetail.originaltitle);
 
     AutoPtr<Element> ratingsEle = dom->createElement("ratings");
@@ -135,8 +138,8 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
     ratingEle->setAttribute("default", "true");
     ratingEle->setAttribute("name", "themoviedb");
     ratingsEle->appendChild(ratingEle);
-    createAndAppendText(ratingEle, "values", std::to_string(videoInfo.videoDetail.userrating.rating));
-    createAndAppendText(ratingEle, "votes", std::to_string(videoInfo.videoDetail.userrating.votes));
+    createAndAppendText(ratingEle, "value", std::to_string(videoInfo.videoDetail.ratings.rating));
+    createAndAppendText(ratingEle, "votes", std::to_string(videoInfo.videoDetail.ratings.votes));
 
     createAndAppendText(rootEle, "plot", videoInfo.videoDetail.plot);
 
@@ -155,7 +158,7 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
         createAndAppendText(rootEle, "country", country);
     }
 
-    // 根据Kodi的Wiki, 只有电影才有编剧信息, 电视剧才有是否完结
+    // 根据Kodi的Wiki, 只有电影才有编剧信息, 电视剧才有是否完结和季编号
     if (videoInfo.videoType == MOVIE) {
         for (const auto& credit : videoInfo.videoDetail.credits) {
             createAndAppendText(rootEle, "credit", credit);
@@ -163,11 +166,15 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
     } else if (videoInfo.videoType == TV) {
         const std::string& statusStr = videoInfo.videoDetail.isEnded ? "Ended" : "Continuing";
         createAndAppendText(rootEle, "status", statusStr);
+        createAndAppendText(rootEle, "season", std::to_string(videoInfo.videoDetail.seasonNumber));
     }
 
     createAndAppendText(rootEle, "director", videoInfo.videoDetail.director);
     createAndAppendText(rootEle, "premiered", videoInfo.videoDetail.premiered);
-    createAndAppendText(rootEle, "studio", videoInfo.videoDetail.studio);
+
+    for (const auto& studio : videoInfo.videoDetail.studio) {
+        createAndAppendText(rootEle, "studio", studio);
+    }
 
     for (const auto& actor : videoInfo.videoDetail.actors) {
         AutoPtr<Element> actorEle = dom->createElement("actor");
@@ -211,10 +218,17 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
         videoInfo.videoDetail.isEnded = ((statusNode == nullptr) ? true : (statusNode->innerText() == "Ended")); 
     }
 
-    videoInfo.videoDetail.userrating.rating =
-        std::stod(rootElement->getNodeByPath("/ratings/rating/values")->innerText());
-    videoInfo.videoDetail.userrating.votes =
-        std::stoi(rootElement->getNodeByPath("/ratings/rating/votes")->innerText());
+    auto ratingValueNode = rootElement->getNodeByPath("/ratings/rating/values");
+    if (ratingValueNode == nullptr) {
+        ratingValueNode = rootElement->getNodeByPath("/ratings/rating/value");
+    }
+
+    if (ratingValueNode != nullptr) {
+        videoInfo.videoDetail.ratings.rating = std::stod(ratingValueNode->innerText());
+        videoInfo.videoDetail.ratings.votes =
+            std::stoi(rootElement->getNodeByPath("/ratings/rating/votes")->innerText());
+    }
+
     videoInfo.videoDetail.plot     = rootElement->getNodeByPath("/plot")->innerText();
     videoInfo.videoDetail.uniqueid = std::stoi(rootElement->getNodeByPath("/uniqueid")->innerText());
 
@@ -230,14 +244,19 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
 
     videoInfo.videoDetail.director  = rootElement->getNodeByPath("/director")->innerText();
     videoInfo.videoDetail.premiered = rootElement->getNodeByPath("/premiered")->innerText();
-    videoInfo.videoDetail.studio    = rootElement->getNodeByPath("/studio")->innerText();
+
+    AutoPtr<NodeList> studioNodes   = rootElement->getElementsByTagName("studio");
+    for (uint32_t i = 0; i < studioNodes->length(); i++) {
+        videoInfo.videoDetail.studio.push_back(studioNodes->item(i)->innerText());
+    }
 
     AutoPtr<NodeList> actorNodes = rootElement->getElementsByTagName("actor");
     for (uint32_t i = 0; i < actorNodes->length(); i++) {
+        Node* orderNode = actorNodes->item(i)->getNodeByPath("order");
         ActorDetail actor{
             actorNodes->item(i)->getNodeByPath("/name")->innerText(),
             actorNodes->item(i)->getNodeByPath("/role")->innerText(),
-            std::stoi(actorNodes->item(i)->getNodeByPath("/order")->innerText()),
+            orderNode == nullptr ? static_cast<int>(i) : std::stoi(actorNodes->item(i)->getNodeByPath("/order")->innerText()),
             actorNodes->item(i)->getNodeByPath("/thumb")->innerText(),
         };
         videoInfo.videoDetail.actors.push_back(actor);
@@ -246,7 +265,80 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     return true;
 }
 
-bool WriteEpisodeNfo(const Poco::JSON::Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths)
+bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
+{
+    Parser parser;
+    auto        result  = parser.parse(sS);
+    Object::Ptr jsonPtr = result.extract<Object::Ptr>();
+
+    videoDetail.title = jsonPtr->getValue<std::string>("title");
+    videoDetail.originaltitle = jsonPtr->getValue<std::string>("original_title");
+    videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
+    videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
+    videoDetail.plot              = jsonPtr->getValue<std::string>("overview");
+    videoDetail.uniqueid          = jsonPtr->getValue<int>("id");
+
+    auto genreJsonPtr = jsonPtr->getArray("genres");
+    for (std::size_t i = 0; i < genreJsonPtr->size();i++) {
+        videoDetail.genre.push_back(genreJsonPtr->getObject(i)->getValue<std::string>("name"));
+    }
+
+    auto contriesJsonPtr = jsonPtr->getArray("production_countries");
+    for (std::size_t i = 0; i < contriesJsonPtr->size(); i++) {
+        const std::string& code = contriesJsonPtr->getObject(i)->getValue<std::string>("iso_3166_1");
+        videoDetail.countries.push_back(CODE_TO_STR.at(code));
+    }
+
+    videoDetail.premiered = jsonPtr->getValue<std::string>("release_date");
+
+    auto studioJsonArrPtr = jsonPtr->getArray("production_companies");
+    for (std::size_t i = 0; i < studioJsonArrPtr->size(); i++) {
+        videoDetail.studio.push_back(studioJsonArrPtr->getObject(0)->getValue<std::string>("name"));
+    }
+
+    return true;
+}
+
+bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
+{
+    Parser      parser;
+    auto        result  = parser.parse(sS);
+    Object::Ptr jsonPtr = result.extract<Object::Ptr>();
+
+    const std::string imageUrl =
+        Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
+
+    auto castJsonArrPtr = jsonPtr->getArray("cast");
+    for (std::size_t i = 0; i < castJsonArrPtr->size(); i++) {
+        auto              castJsonObjPtr = castJsonArrPtr->getObject(i);
+        const std::string department     = castJsonObjPtr->getValue<std::string>("known_for_department");
+        if (department == "Acting") {
+            ActorDetail actor = {
+                castJsonObjPtr->getValue<std::string>("name"),
+                castJsonObjPtr->getValue<std::string>("character"),
+                castJsonObjPtr->getValue<int>("order"),
+                castJsonObjPtr->isNull("profile_path")
+                    ? ""
+                    : imageUrl + castJsonObjPtr->getValue<std::string>("profile_path"),
+            };
+            videoDetail.actors.push_back(actor);
+        }
+    }
+
+    auto crewJsonArrPtr = jsonPtr->getArray("crew");
+    for (std::size_t i = 0; i < crewJsonArrPtr->size(); i++) {
+        auto crewJsonObjPtr = crewJsonArrPtr->getObject(i);
+        if (crewJsonObjPtr->optValue<std::string>("job", "") == "Writer") {
+            videoDetail.credits.push_back(crewJsonObjPtr->getValue<std::string>("name"));
+        } else if (crewJsonObjPtr->optValue<std::string>("job", "") == "Director") {
+            videoDetail.director = crewJsonObjPtr->getValue<std::string>("name");
+        }
+    }
+
+    return true;
+}
+
+bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths)
 {
     // TODO: 如果TMDB提供的剧集数量与本地数量不符, 是否使用内置规则生成默认标题
     bool isEpisodeCountMatch = false;

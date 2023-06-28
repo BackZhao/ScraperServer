@@ -52,6 +52,12 @@ int HTTPServerApp::run()
         m_autoUpdateThread = std::thread(std::bind(&HTTPServerApp::AutoUpdate, this));
     }
 
+    ApiManager::Instance().ScanAll();
+    ApiManager::Instance().RefreshMovie();
+
+    m_httpServer->stop();
+    return 0;
+
     // 捕获SIGINT和SIGTERM
     signal(SIGINT, SignalHandler);
     signal(SIGTERM, SignalHandler);

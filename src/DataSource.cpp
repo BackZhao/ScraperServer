@@ -3,11 +3,18 @@
 #include <algorithm>
 #include <fstream>
 #include <functional>
+#include <set>
 
+#include <Poco/DOM/DOMParser.h>
+#include <Poco/DOM/Document.h>
+#include <Poco/AutoPtr.h>
 #include <Poco/SortedDirectoryIterator.h>
 
 #include "DataConvert.h"
 #include "Logger.h"
+
+using namespace Poco::XML;
+using Poco::AutoPtr;
 
 bool DataSource::IsVideo(const std::string& suffix)
 {
@@ -22,15 +29,19 @@ bool DataSource::IsVideo(const std::string& suffix)
 
 bool DataSource::IsNfoFormatMatch(const std::string& nfoPath)
 {
-    // 本程序生成的NFO文件第一行固定为此格式
-    static const std::string expectedFirstLine = R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>)";
+    static const std::set<std::string> nodeNames = {
+        "tvshow",
+        "movie",
+        "episodedetails",
+    };
 
-    std::ifstream ifs(nfoPath);
-    std::string   firstLine;
-    std::getline(ifs, firstLine);
+    // 获取根节点
+    DOMParser         parser;
+    AutoPtr<Document> dom         = parser.parse(nfoPath);
+    auto              rootElement = dom->documentElement();
 
-    // TODO: 是否需要解析XML是否完整?
-    return firstLine == expectedFirstLine;
+    // 根节点名称必须在指定范围内
+    return nodeNames.find(rootElement->nodeName()) != nodeNames.end();
 }
 
 bool DataSource::IsJpgCompleted(const std::string& posterName)
@@ -86,7 +97,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
         for (const auto& episodePath : episodePaths) {
             const std::string& baseNameWithDir =
                 Poco::Path(episodePath).parent().toString() + Poco::Path(episodePath).getBaseName();
-            if (IsNfoFormatMatch(baseNameWithDir + ".nfo")) {
+            if (Poco::File(baseNameWithDir + ".nfo").exists() &&  IsNfoFormatMatch(baseNameWithDir + ".nfo")) {
                 videoInfo.videoDetail.episodeNfoCount++;
             }
         }
@@ -128,6 +139,7 @@ std::string DataSource::GetLargestFile(const std::string& path)
     std::vector<std::pair<std::string, size_t>> videos;
     while (iter != end) {
         if (IsVideo(iter.path().getExtension())) {
+            // TODO: 检测软链是否存在
             videos.push_back(std::make_pair(iter->path(), iter->getSize()));
         }
         ++iter;
@@ -154,9 +166,11 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
         Poco::SortedDirectoryIterator iter(moviePath);
         Poco::SortedDirectoryIterator end;
         while (iter != end) {
+            LOG_TRACE("Scanning file/directory {} ...", iter->path());
             // 电影的最大扫描深度为1
             if (iter->isFile()) { // 视频文件直接添加
                 if (IsVideo(iter.path().getExtension())) {
+                    LOG_TRACE("Found movie: {}", iter->path());
                     VideoInfo videoInfo(MOVIE, iter->path());
                     CheckVideoStatus(videoInfo);
                     videoInfos.push_back(videoInfo);
@@ -164,6 +178,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
             } else if (iter->isDirectory()) { // 仅添加目录下的最大视频文件
                 const std::string& largestVideoFile = GetLargestFile(iter->path());
                 if (!largestVideoFile.empty()) {
+                    LOG_TRACE("Found movie: {}", largestVideoFile);
                     VideoInfo videoInfo(MOVIE, largestVideoFile);
                     CheckVideoStatus(videoInfo);
                     videoInfos.push_back(videoInfo);
