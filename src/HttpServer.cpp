@@ -53,11 +53,11 @@ int HTTPServerApp::run()
     }
 
     // TODO: 扫描时不需要解析XML所有的结构, 只需要解析出TMDBID即可
-    ApiManager::Instance().ScanAll();
-    ApiManager::Instance().RefreshMovie();
+    // ApiManager::Instance().ScanAll();
+    // ApiManager::Instance().RefreshMovie();
 
-    m_httpServer->stop();
-    return 0;
+    // m_httpServer->stop();
+    // return 0;
 
     // 捕获SIGINT和SIGTERM
     signal(SIGINT, SignalHandler);

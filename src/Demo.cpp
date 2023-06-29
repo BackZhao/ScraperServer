@@ -48,18 +48,33 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // auto GenNfo = [](int tmdbId, const std::string& nfoPath, const std::string& posterPath) {
+    //     std::stringstream sS;
+    //     GetMovieDetail(sS, tmdbId);
 
-    // std::stringstream sS;
-    // GetMovieDetail(sS, 739405);
+    //     VideoInfo videoInfo(MOVIE, "");
+    //     videoInfo.posterPath = posterPath;
+    //     ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail);
 
-    // VideoInfo videoInfo(MOVIE, "/home/bkzhao/Demo.mkv");
-    // ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail);
+    //     GetMovieCredits(sS, tmdbId);
+    //     ParseCreditsToVideoDetail(sS, videoInfo.videoDetail);
 
-    // GetMovieCredits(sS, 739405);
-    // ParseCreditsToVideoDetail(sS, videoInfo.videoDetail);
-    
+    //     VideoInfoToNfo(videoInfo, nfoPath);
+    //     DownloadPoster(videoInfo);
+    // };
+
+    // GenNfo(
+    //     109987,
+    //     "/data-remote/ycnas/新电影/Thief.of.Time.1992.HDTV.1080P.x265.10bit.AAC.Mandarin&Cantonese-FFansTV.nfo",
+    //     "/data-remote/ycnas/新电影/Thief.of.Time.1992.HDTV.1080P.x265.10bit.AAC.Mandarin&Cantonese-FFansTV-poster.jpg");
+
+    // return 0;
+
+    // VideoInfo videoInfo(MOVIE, "/data/Movies/Now.You.See.Me.2013.Extended.1080p.BluRay.DTS.x264-NiP.mkv");
+    // videoInfo.nfoPath   = "/data/Movies/Now.You.See.Me.2013.Extended.1080p.BluRay.DTS.x264-NiP.nfo";
+    // videoInfo.nfoStatus = NFO_FORMAT_MATCH;
+    // ParseNfoToVideoInfo(videoInfo);
     // VideoInfoToNfo(videoInfo, "/home/bkzhao/Demo.nfo");
-
     // return 0;
 
     // 是否需要后台运行
