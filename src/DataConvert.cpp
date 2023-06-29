@@ -11,11 +11,11 @@
 #include <Poco/DOM/DOMWriter.h>
 #include <Poco/DOM/Document.h>
 #include <Poco/DOM/NodeList.h>
+#include <Poco/DOM/Text.h>
+#include <Poco/JSON/Parser.h>
+#include <Poco/Path.h>
 #include <Poco/StreamCopier.h>
 #include <Poco/XML/XMLWriter.h>
-#include <Poco/DOM/Text.h>
-#include <Poco/Path.h>
-#include <Poco/JSON/Parser.h>
 
 using Poco::AutoPtr;
 using namespace Poco::XML;
@@ -87,7 +87,7 @@ void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Object& ou
         if (videoInfo.videoType == TV) {
             videoDetailJson.set("SeasonNumber", videoInfo.videoDetail.seasonNumber);
             videoDetailJson.set("Status", videoInfo.videoDetail.isEnded ? "Ended" : "Continuing");
-                videoDetailJson.set("EpisodeNfoCount", videoInfo.videoDetail.episodeNfoCount);
+            videoDetailJson.set("EpisodeNfoCount", videoInfo.videoDetail.episodeNfoCount);
             videoDetailJson.set("EpisodeCount", videoInfo.videoDetail.episodePaths.size());
             Array episodePathsArrJson;
             for (const auto& episodePath : videoInfo.videoDetail.episodePaths) {
@@ -117,13 +117,13 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
         {MOVIE_SET, "movie"},
     };
 
-    AutoPtr<Document> dom = new Document();
-    AutoPtr<Element> rootEle = dom->createElement(rootTagStr.at(videoInfo.videoType));
+    AutoPtr<Document> dom     = new Document();
+    AutoPtr<Element>  rootEle = dom->createElement(rootTagStr.at(videoInfo.videoType));
     dom->appendChild(rootEle);
 
     auto createAndAppendText = [dom](Element* parent, const std::string& tagName, const std::string& text) {
-        AutoPtr<Element> ele = dom->createElement(tagName);
-        AutoPtr<Text> textNode = dom->createTextNode(text);
+        AutoPtr<Element> ele      = dom->createElement(tagName);
+        AutoPtr<Text>    textNode = dom->createTextNode(text);
         ele->appendChild(textNode);
         parent->appendChild(ele);
     };
@@ -197,7 +197,7 @@ template <typename T>
 T GetNodeValByPath(Node* parentNode, const std::string& nodePath, T defaultVal = T())
 {
     auto childNode = parentNode->getNodeByPath(nodePath);
-    T val = defaultVal;
+    T    val       = defaultVal;
     if (childNode != nullptr) {
         std::istringstream iSS(childNode->innerText());
         iSS >> val;
@@ -209,8 +209,8 @@ T GetNodeValByPath(Node* parentNode, const std::string& nodePath, T defaultVal =
 template <>
 std::string GetNodeValByPath(Node* parentNode, const std::string& nodePath, std::string defaultVal)
 {
-    auto childNode = parentNode->getNodeByPath(nodePath);
-    std::string    val       = defaultVal;
+    auto        childNode = parentNode->getNodeByPath(nodePath);
+    std::string val       = defaultVal;
     if (childNode != nullptr) {
         std::istringstream iSS(childNode->innerText());
         val = iSS.str();
@@ -238,7 +238,8 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     // 有些电视剧可能刮削的时候未填写季编号, 则将其填写为1, 即默认为第一部/季, 未填写是否完结的默认完结
     if (videoInfo.videoType == TV) {
         videoInfo.videoDetail.seasonNumber = GetNodeValByPath<int>(rootElement, "/season", 1);
-        videoInfo.videoDetail.isEnded = GetNodeValByPath<std::string>(rootElement, "/status", "Ended") == "Ended" ? true : false;
+        videoInfo.videoDetail.isEnded =
+            GetNodeValByPath<std::string>(rootElement, "/status", "Ended") == "Ended" ? true : false;
     }
 
     videoInfo.videoDetail.ratings.rating = GetNodeValByPath<double>(rootElement, "/ratings/rating/value");
@@ -259,14 +260,14 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     videoInfo.videoDetail.director  = GetNodeValByPath<std::string>(rootElement, "/director");
     videoInfo.videoDetail.premiered = GetNodeValByPath<std::string>(rootElement, "/premiered");
 
-    AutoPtr<NodeList> studioNodes   = rootElement->getElementsByTagName("studio");
+    AutoPtr<NodeList> studioNodes = rootElement->getElementsByTagName("studio");
     for (uint32_t i = 0; i < studioNodes->length(); i++) {
         videoInfo.videoDetail.studio.push_back(studioNodes->item(i)->innerText());
     }
 
     AutoPtr<NodeList> actorNodes = rootElement->getElementsByTagName("actor");
     for (uint32_t i = 0; i < actorNodes->length(); i++) {
-        auto actorNode = actorNodes->item(i);
+        auto        actorNode = actorNodes->item(i);
         ActorDetail actor{
             GetNodeValByPath<std::string>(actorNode, "/name"),
             GetNodeValByPath<std::string>(actorNode, "/role"),
@@ -281,19 +282,19 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
 
 bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
 {
-    Parser parser;
+    Parser      parser;
     auto        result  = parser.parse(sS);
     Object::Ptr jsonPtr = result.extract<Object::Ptr>();
 
-    videoDetail.title = jsonPtr->getValue<std::string>("title");
-    videoDetail.originaltitle = jsonPtr->getValue<std::string>("original_title");
+    videoDetail.title          = jsonPtr->getValue<std::string>("title");
+    videoDetail.originaltitle  = jsonPtr->getValue<std::string>("original_title");
     videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
     videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
-    videoDetail.plot              = jsonPtr->getValue<std::string>("overview");
-    videoDetail.uniqueid          = jsonPtr->getValue<int>("id");
+    videoDetail.plot           = jsonPtr->getValue<std::string>("overview");
+    videoDetail.uniqueid       = jsonPtr->getValue<int>("id");
 
     auto genreJsonPtr = jsonPtr->getArray("genres");
-    for (std::size_t i = 0; i < genreJsonPtr->size();i++) {
+    for (std::size_t i = 0; i < genreJsonPtr->size(); i++) {
         videoDetail.genre.push_back(genreJsonPtr->getObject(i)->getValue<std::string>("name"));
     }
 
@@ -385,7 +386,7 @@ bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>
             parent->appendChild(ele);
         };
 
-        auto episodeJsonPtr = jsonArrPtr->getObject(i);
+        auto        episodeJsonPtr = jsonArrPtr->getObject(i);
         std::string title =
             isEpisodeCountMatch ? episodeJsonPtr->getValue<std::string>("name") : "第" + std::to_string(i + 1) + "集";
         createAndAppendText(rootEle, "title", title);
