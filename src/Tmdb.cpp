@@ -4,6 +4,8 @@
 #include "Logger.h"
 #include "DataConvert.h"
 
+#include <fstream>
+
 #include "Poco/Net/HTTPClientSession.h"
 #include "Poco/Net/HTTPRequest.h"
 #include "Poco/Net/HTTPResponse.h"
@@ -139,6 +141,24 @@ bool GetMovieCredits(std::ostream& out, int tmdbId)
     LOG_DEBUG("Get movie credits uri is: {}", uri.toString());
 
     return SendRequest(out, uri);
+}
+
+bool DownloadPoster(VideoInfo& videoInfo)
+{
+    std::ofstream ofs(videoInfo.posterPath);
+    if (!ofs.is_open()) {
+        LOG_ERROR("Failed to open file {} to write poster!", videoInfo.posterPath);
+        return false;
+    }
+
+    if (videoInfo.videoDetail.posterUrl.empty()) {
+        LOG_ERROR("Poster uri for {} is empty!", videoInfo.videoPath);
+        return false;
+    } else {
+        LOG_DEBUG("Download poster {} for {}", videoInfo.videoDetail.posterUrl, videoInfo.videoPath);
+        Poco::URI uri(videoInfo.videoDetail.posterUrl);
+        return SendRequest(ofs, uri);
+    }
 }
 
 bool UpdateTV(VideoInfo& videoInfo)

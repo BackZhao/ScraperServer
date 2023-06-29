@@ -14,4 +14,6 @@ bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum);
 
 bool GetMovieCredits(std::ostream& out, int tmdbId);
 
+bool DownloadPoster(VideoInfo& videoInfo);
+
 bool UpdateTV(VideoInfo& videoInfo);
