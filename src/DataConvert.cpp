@@ -293,6 +293,12 @@ bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDet
     videoDetail.plot           = jsonPtr->getValue<std::string>("overview");
     videoDetail.uniqueid       = jsonPtr->getValue<int>("id");
 
+    if (!jsonPtr->getValue<std::string>("poster_path").empty()) {
+        const std::string imageUrl =
+            Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
+        videoDetail.posterUrl = imageUrl + jsonPtr->getValue<std::string>("poster_path");
+    }
+
     auto genreJsonPtr = jsonPtr->getArray("genres");
     for (std::size_t i = 0; i < genreJsonPtr->size(); i++) {
         videoDetail.genre.push_back(genreJsonPtr->getObject(i)->getValue<std::string>("name"));

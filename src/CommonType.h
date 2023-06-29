@@ -133,6 +133,8 @@ struct VideoDetail {
     int                      episodeNfoCount; // 电视剧剧集完整的NFO文件个数
     std::vector<std::string> episodePaths;    // 电视剧剧集路径
     bool                     isEnded;         // 是否已完结
+
+    std::string posterUrl; // 视频的海报图片地址(短地址, 仅包含服务器上的文件名称)
 };
 
 /**
@@ -148,7 +150,6 @@ struct VideoInfo {
     PosterStatus         posterStatus; // 海报文件状态
     std::string          nfoPath;      // NFO文件路径
     std::string          posterPath;   // 海报路径
-    std::string          posterUrl;    // 视频的海报图片地址(短地址, 仅包含服务器上的文件名称)
     std::vector<uint8_t> posterData;   // 视频海报的图片二进制数据
     VideoDetail          videoDetail;
 };
