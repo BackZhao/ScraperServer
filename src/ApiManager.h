@@ -58,7 +58,7 @@ public:
 
     void ProcessScan(VideoType videoType);
     void Scan(const Poco::JSON::Object &param, std::ostream &out);
-    void ScanResult(const Poco::JSON::Object &param, std::ostream &out);
+    void ScanResult(const Poco::JSON::Object&, std::ostream &out);
     void List(const Poco::JSON::Object &param, std::ostream &out);
     void Detail(const Poco::JSON::Object &param, std::ostream &out);
     void AutoUpdateTV();

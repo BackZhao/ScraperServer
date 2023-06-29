@@ -62,7 +62,7 @@ void ApiManager::ScanAll()
     }
 }
 
-void ApiManager::ScanResult(const Poco::JSON::Object &param, std::ostream &out)
+void ApiManager::ScanResult(const Poco::JSON::Object&, std::ostream &out)
 {
     Poco::JSON::Array outJsonArr;
     for (auto &scanInfoPair : m_scanInfos) {
