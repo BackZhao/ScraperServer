@@ -6,7 +6,14 @@
 #include "Logger.h"
 #include "Option.h"
 #include "Tmdb.h"
-#include "version.h"
+
+#include <version.h>
+
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif // WIN32
 
 int main(int argc, char* argv[])
 {
@@ -31,6 +38,21 @@ int main(int argc, char* argv[])
     }
 
     ApiManager::Instance().SetScanPaths(Config::Instance().GetPaths());
+
+    // 是否需要后台运行
+    if (option.IsDaemon()) {
+#ifdef _WIN32
+        HWND hWnd = ::FindWindowA("ConsoleWindowClass", NULL);
+        if (hWnd != NULL) {
+            ::ShowWindow(hWnd, SW_HIDE);
+        }
+#else
+        if (daemon(1, 0) != 0) {
+            perror("daemon");
+            return 1;
+        }
+#endif // WIN32
+    }
 
     HTTPServerApp app;
     return app.run();
