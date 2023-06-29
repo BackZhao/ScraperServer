@@ -147,7 +147,7 @@ if(NOT TARGET Poco::Foundation)
 
   FetchContent_Declare(
     poco
-    GIT_REPOSITORY "https://github.com/pocoproject/poco.git"
+    GIT_REPOSITORY "https://gitee.com/BackZhao97/poco.git"
     GIT_TAG poco-1.12.4-release
     )
   FetchContent_GetProperties(poco)
@@ -162,7 +162,7 @@ find_package(spdlog QUIET)
 if(NOT TARGET spdlog::spdlog_header_only)
   FetchContent_Declare(
     spdlog
-    GIT_REPOSITORY "https://github.com/gabime/spdlog.git"
+    GIT_REPOSITORY "https://gitee.com/BackZhao97/spdlog.git"
     GIT_TAG v1.x
     EXCLUDE_FROM_ALL
     )
