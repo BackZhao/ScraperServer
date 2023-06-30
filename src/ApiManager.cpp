@@ -102,13 +102,57 @@ void ApiManager::List(const Poco::JSON::Object &param, std::ostream &out)
     }
     VideoType videoType = findResult->second;
 
+    enum VideoStatus {
+        INCOMPLETE,
+        COMPLETE,
+        ALL,
+    };
+
+    static std::map<std::string, VideoStatus> videoStatusStrToEnum = {
+        {"incomplete", INCOMPLETE},
+        {"complete", COMPLETE},
+        {"all", ALL},
+    };
+
+    VideoStatus videoStatus;
+    if (param.isNull("status")) {
+        videoStatus = ALL;
+    } else {
+        const std::string videoStatusStr = Poco::toLower(param.getValue<std::string>("status"));
+        auto iter = videoStatusStrToEnum.find(videoStatusStr);
+        if (iter == videoStatusStrToEnum.end()) {
+            out << R"({"success": false, "msg": "Video status is invalid!"})";
+            return;
+        } else {
+            videoStatus = iter->second;
+        }
+    }
+
     Poco::JSON::Array           outJsonArr;
     std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
     if (locker.owns_lock() && m_scanInfos[videoType].scanStatus != NEVER_SCANNED) {
-        uint32_t id = 0;
-        for (const auto &videoInfo : m_videoInfos.at(videoType)) {
+        for (std::size_t i = 0; i < m_videoInfos.at(videoType).size(); i++) {
+            const auto& videoInfo = m_videoInfos.at(videoType).at(i);
             Poco::JSON::Object jsonObj;
-            VideoInfoToBriefJson(id++, videoInfo, jsonObj);
+            switch (videoStatus) {
+                case INCOMPLETE: {
+                    if (videoInfo.nfoStatus == NFO_FORMAT_MATCH && videoInfo.posterStatus == POSTER_COMPELETED) {
+                        continue;
+                    }
+                    break;
+                }
+                case COMPLETE: {
+                    if (videoInfo.nfoStatus != NFO_FORMAT_MATCH || videoInfo.posterStatus != POSTER_COMPELETED) {
+                        continue;
+                        ;
+                    }
+                    break;
+                }
+                case ALL:
+                default:
+                    break;
+            }
+            VideoInfoToBriefJson(i, videoInfo, jsonObj);
             outJsonArr.add(jsonObj);
         }
     }
