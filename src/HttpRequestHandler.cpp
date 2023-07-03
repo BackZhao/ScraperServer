@@ -57,6 +57,7 @@ void ApiRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResp
         {"/api/scanResult", std::bind(&ApiManager::ScanResult, &ApiManager::Instance(), _1, _2)},
         {"/api/list", std::bind(&ApiManager::List, &ApiManager::Instance(), _1, _2)},
         {"/api/detail", std::bind(&ApiManager::Detail, &ApiManager::Instance(), _1, _2)},
+        {"/api/scrape", std::bind(&ApiManager::Scrape, &ApiManager::Instance(), _1, _2)},
     };
 
     Poco::URI uri(request.getURI());

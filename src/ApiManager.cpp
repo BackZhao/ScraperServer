@@ -193,6 +193,71 @@ void ApiManager::Detail(const Poco::JSON::Object &param, std::ostream &out)
     outJsonObj.stringify(out);
 }
 
+void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
+{
+    if (param.isNull("videoType")) {
+        out << R"({"success": false, "msg": "Video type is not given!"})";
+        return;
+    }
+
+    if (param.isNull("id")) {
+        out << R"({"success": false, "msg": "Id is not given!"})";
+        return;
+    }
+
+    if (param.isNull("tmdbid")) {
+        out << R"({"success": false, "msg": "TMDB id is not given!"})";
+        return;
+    }
+
+    auto findResult = STR_TO_VIDEO_TYPE.find(param.get("videoType"));
+    if (findResult == STR_TO_VIDEO_TYPE.end()) {
+        out << R"({"success": false, "msg": "Video type is invalid!"})";
+        return;
+    }
+    VideoType videoType = findResult->second;
+
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
+    if (locker.owns_lock() && m_scanInfos[videoType].scanStatus != NEVER_SCANNED) {
+        size_t id = std::stoull(param.getValue<std::string>("id"));
+        if (id >= m_videoInfos.at(videoType).size()) { // 防止ID越界
+            out << R"({"success": false, "msg": "Id is out of range!"})";
+            return;
+        }
+
+        auto &videoInfo                = m_videoInfos.at(videoType).at(id);
+        videoInfo.videoDetail.uniqueid = std::stoi(param.getValue<std::string>("tmdbid"));
+        std::stringstream sS;
+        // TODO: 添加刮削电视剧
+        if (!GetMovieDetail(sS, videoInfo.videoDetail.uniqueid)) {
+            out << R"({"success": false, "msg": "Get movie detail failed!"})";
+            return;
+        }
+        if (!ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail)) {
+            out << R"({"success": false, "msg": "Parse movie detail failed!"})";
+            return;
+        }
+        if (!GetMovieCredits(sS, videoInfo.videoDetail.uniqueid)) {
+            out << R"({"success": false, "msg": "Get movie credits failed!"})";
+            return;
+        }
+        if (!ParseCreditsToVideoDetail(sS, videoInfo.videoDetail)) {
+            out << R"({"success": false, "msg": "Parse movie credits failed!"})";
+            return;
+        }
+        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath)) {
+            out << R"({"success": false, "msg": "Write nfo failed!"})";
+            return;
+        }
+        if (!DownloadPoster(videoInfo)) {
+            out << R"({"success": false, "msg": "Download poster failed!"})";
+            return;
+        }
+    }
+
+    out << R"({"success": true})";
+}
+
 void ApiManager::AutoUpdateTV()
 {
     if (m_videoInfos.at(TV).empty()) {

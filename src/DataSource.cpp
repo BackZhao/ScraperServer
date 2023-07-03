@@ -61,9 +61,11 @@ bool DataSource::IsJpgCompleted(const std::string& posterName)
         ifs.close();
 
         if (firstTwoBytes != SOI || lastTwoBytes != EOI) {
+            LOG_ERROR("{} SOI({})/EOI({}) unmatched!", posterName, firstTwoBytes, lastTwoBytes);
             return false;
         }
     } else {
+        LOG_ERROR("{} open failed for checking: {}", posterName, strerror(errno));
         return false;
     }
 
@@ -107,15 +109,19 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
         case MOVIE: {
             const std::string& baseNameWithDir =
                 Poco::Path(videoInfo.videoPath).parent().toString() + Poco::Path(videoInfo.videoPath).getBaseName();
-            CheckNfo(baseNameWithDir + ".nfo");
-            CheckPoster(baseNameWithDir + "-poster.jpg");
+            videoInfo.nfoPath = baseNameWithDir + ".nfo";
+            videoInfo.posterPath = baseNameWithDir + "-poster.jpg";
+            CheckNfo(videoInfo.nfoPath);
+            CheckPoster(videoInfo.posterPath);
             break;
         }
 
         case TV: {
             const std::string& dirName = videoInfo.videoPath + Poco::Path::separator();
-            CheckNfo(dirName + "tvshow.nfo");
-            CheckPoster(dirName + "poster.jpg");
+            videoInfo.nfoPath          = dirName + "tvshow.nfo";
+            videoInfo.posterPath       = dirName + "poster.jpg";
+            CheckNfo(videoInfo.nfoPath);
+            CheckPoster(videoInfo.posterPath);
             CheckEpisodes();
             break;
         }

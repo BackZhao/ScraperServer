@@ -61,6 +61,7 @@ public:
     void ScanResult(const Poco::JSON::Object&, std::ostream &out);
     void List(const Poco::JSON::Object &param, std::ostream &out);
     void Detail(const Poco::JSON::Object &param, std::ostream &out);
+    void Scrape(const Poco::JSON::Object &param, std::ostream &out);
     void AutoUpdateTV();
 
     void RefreshMovie();
