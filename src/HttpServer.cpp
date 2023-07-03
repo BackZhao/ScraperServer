@@ -20,7 +20,9 @@ void HTTPServerApp::AutoUpdate()
     while (m_signum == -1) {
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {
-            ApiManager::Instance().ScanAll();
+            Poco::JSON::Object jsonObj;
+            jsonObj.set("videoType", "tv");
+            ApiManager::Instance().Scan(jsonObj, std::cout);
             ApiManager::Instance().AutoUpdateTV();
             lastUpdateTime = std::chrono::steady_clock::now();
         }
