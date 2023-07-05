@@ -15,6 +15,8 @@ public:
                      const std::map<VideoType, std::vector<std::string>>& paths,
                      std::map<VideoType, std::vector<VideoInfo>>&   videoInfos);
 
+    static void Cancel();
+
 private:
 
     static bool IsVideo(const std::string& suffix);
@@ -30,4 +32,8 @@ private:
         return true;
     };
     static bool ScanTv(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos);
+
+private:
+
+    static bool m_isCancel; // 是否取消扫描
 };

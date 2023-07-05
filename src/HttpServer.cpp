@@ -32,8 +32,9 @@ void HTTPServerApp::AutoUpdate()
 
 void HTTPServerApp::SignalHandler(int signum)
 {
-    m_signum = signum;
     LOG_INFO("Signal recieved: {}", m_signum);
+    DataSource::Cancel();
+    m_signum = signum;
 }
 
 int HTTPServerApp::run()
@@ -72,7 +73,6 @@ int HTTPServerApp::run()
     // 回收线程资源
     if (Config::Instance().IsAuto()) {
         m_autoUpdateThread.join();
-        std::cout << "auto update thread joined." << std::endl;
     }
 
     // 停止HTTP服务器

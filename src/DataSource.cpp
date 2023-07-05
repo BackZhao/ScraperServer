@@ -16,6 +16,8 @@
 using namespace Poco::XML;
 using Poco::AutoPtr;
 
+bool DataSource::m_isCancel = false;
+
 bool DataSource::IsVideo(const std::string& suffix)
 {
     // 比较文件名的最后四个字符(即后缀名)是否属于规定之内
@@ -171,7 +173,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
     for (const auto& moviePath : paths) {
         Poco::SortedDirectoryIterator iter(moviePath);
         Poco::SortedDirectoryIterator end;
-        while (iter != end) {
+        while (iter != end && !m_isCancel) {
             LOG_TRACE("Scanning file/directory {} ...", iter->path());
             // 电影的最大扫描深度为1
             if (iter->isFile()) { // 视频文件直接添加
@@ -219,7 +221,7 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<Video
     for (const auto& tvPath : tvPaths) {
         Poco::SortedDirectoryIterator iter(tvPath);
         Poco::SortedDirectoryIterator end;
-        while (iter != end) {
+        while (iter != end && !m_isCancel) {
             // 电视剧仅添加一级目录
             if (iter->isDirectory()) {
                 VideoInfo videoInfo(TV, iter->path());
@@ -254,4 +256,10 @@ bool DataSource::Scan(VideoType                                            video
     /* clang-format on */
 
     return scanFunc.at(videoType)(paths.at(videoType), videoInfos.at(videoType));
+}
+
+void DataSource::Cancel()
+{
+    LOG_INFO("Cancel all the scanning jobs...");
+    m_isCancel = true;
 }
