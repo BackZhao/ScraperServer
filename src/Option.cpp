@@ -20,15 +20,14 @@ void Option::DisplayHelp()
 	std::cout <<
 R"(
 Usage:
-    supervisor [options] [parameters]
+    )" << m_argv[0] << R"( [options] [parameters]
 
 Options:
-    -c, --conf <arg>      Set configure file path, default: "/etc/supervisor.json"
+    -c, --conf <arg>      Set configure file path, default: "$HOME/ScraperServer/config/ScraperServer.json"
     -p, --port <arg>      Set listen port of HTTP server
-    -w, --web <arg>       Set the root directory for web resources
     -l, --log-level <arg> Set the log level, default: info, optional input(case insensitive):
                           critical/c, error/e, warn/w, info/i, debug/d, trace/t
-    -a, --auto            Enable the auto updating
+    -a, --auto            Enable the auto updating tv episodes nfo
     -d, --debug           Decrease the log level from info
     -o, --output <arg>    Set the log saving file path
     -h, --help            Print this help
@@ -79,7 +78,6 @@ int Option::Process()
         {"daemon",          no_argument, nullptr, OPTION_DAEMON}, // 是否后台
         {"port",      required_argument, nullptr,           'p'}, // 设置端口号
         {"config",    required_argument, nullptr,           'c'}, // 设置配置文件路径
-        {"web",       required_argument, nullptr,           'w'}, // 设置前端页面的资源根目录
         {"debug",           no_argument, nullptr,           'd'}, // 降低日志等级
         {"auto",            no_argument, nullptr,           'a'}, // 是否自动
         {"log-level", required_argument, nullptr,           'l'}, // 设置日志等级
