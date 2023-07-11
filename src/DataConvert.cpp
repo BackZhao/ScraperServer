@@ -28,13 +28,23 @@ void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Object& outJs
     outJson.set("VideoPath", videoInfo.videoPath);
     outJson.set("NfoStatus", static_cast<int>(videoInfo.nfoStatus));
     outJson.set("PosterStatus", static_cast<int>(videoInfo.posterStatus));
-    outJson.set("NfoPath", videoInfo.nfoPath);
-    outJson.set("PosterPath", videoInfo.posterPath);
+
+    static std::map<HDRType, std::string> hdrEnumToStr = {
+        {NON_HDR, "Non-HDR"},
+        {HDR10, "HDR10"},
+        {HDR10Plus, "HDR10+"},
+        {DOLBY_VISION, "Dolby Vision"},
+        {DOLBY_VISION_AND_HDR10, "Dolby Vision & HDR10"},
+    };
+    outJson.set("HDRType", hdrEnumToStr.at(videoInfo.hdrType));
 }
 
 void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Object& outJson)
 {
     VideoInfoToBriefJson(id, videoInfo, outJson);
+
+    outJson.set("NfoPath", videoInfo.nfoPath);
+    outJson.set("PosterPath", videoInfo.posterPath);
 
     // 如果NFO文件格式匹配, 则额外填写NFO的信息
     if (videoInfo.nfoStatus == NFO_FORMAT_MATCH) {
@@ -100,7 +110,7 @@ void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Object& ou
     }
 }
 
-bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
+bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool setHDRTitle)
 {
     std::ofstream ofs(nfoPath);
     if (!ofs.is_open()) {
@@ -128,7 +138,24 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath)
         parent->appendChild(ele);
     };
 
-    createAndAppendText(rootEle, "title", videoInfo.videoDetail.title);
+    if (setHDRTitle && videoInfo.hdrType != NON_HDR) {
+        static std::map<HDRType, std::string> hdrEnumToTitleStr = {
+            {NON_HDR, ""},
+            {HDR10, "HDR10"},
+            {HDR10Plus, "HDR10+"},
+            {DOLBY_VISION, "Dolby Vision"},
+            {DOLBY_VISION_AND_HDR10, "Dolby Vision"},
+        };
+        std::string title = videoInfo.videoDetail.title;
+        std::string hdrTitle = hdrEnumToTitleStr.at(videoInfo.hdrType);
+        if (title.find(hdrTitle) == std::string::npos) {
+            createAndAppendText(rootEle, "title", title + " " + hdrTitle);
+        } else {
+            createAndAppendText(rootEle, "title", title);
+        }
+    } else {
+        createAndAppendText(rootEle, "title", videoInfo.videoDetail.title);
+    }
     createAndAppendText(rootEle, "originaltitle", videoInfo.videoDetail.originaltitle);
 
     AutoPtr<Element> ratingsEle = dom->createElement("ratings");

@@ -245,7 +245,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
             out << R"({"success": false, "msg": "Parse movie credits failed!"})";
             return;
         }
-        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath)) {
+        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true)) {
             out << R"({"success": false, "msg": "Write nfo failed!"})";
             return;
         }
@@ -307,6 +307,7 @@ void ApiManager::RefreshMovie()
         // TODO: 后续取消XML全解析即可优化此处
         VideoInfo videoInfo(oldVideoInfo.videoType, oldVideoInfo.videoPath);
         videoInfo.nfoPath = oldVideoInfo.nfoPath;
+        videoInfo.hdrType = oldVideoInfo.hdrType;
         videoInfo.videoDetail.uniqueid = oldVideoInfo.videoDetail.uniqueid;
 
         LOG_DEBUG("Refreshing movie nfo: {}", videoInfo.videoPath);
@@ -332,7 +333,7 @@ void ApiManager::RefreshMovie()
             failedVec.push_back(videoInfo.videoPath);
             continue;
         }
-        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath)) {
+        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true)) {
             failedCount++;
             failedVec.push_back(videoInfo.videoPath);
             continue;

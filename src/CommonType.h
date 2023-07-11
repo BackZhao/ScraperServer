@@ -37,6 +37,18 @@ enum PosterStatus {
     POSTER_NOT_FOUND,    // 海报文件不存在
 };
 
+/**
+ * @brief 视频的HDR类型
+ * 
+ */
+enum HDRType {
+    NON_HDR,                // 非HDR类型
+    HDR10,                  // HDR10
+    HDR10Plus,              // HDR10+
+    DOLBY_VISION,           // 杜比视界
+    DOLBY_VISION_AND_HDR10, //杜比视界 + HDR10
+};
+
 static std::map<std::string, VideoType> STR_TO_VIDEO_TYPE = {
     {"movie", MOVIE},
     {"tv", TV},
@@ -146,6 +158,7 @@ struct VideoInfo {
 
     VideoType            videoType;
     std::string          videoPath;
+    HDRType              hdrType;
     NfoStatus            nfoStatus;    // NFO文件状态
     PosterStatus         posterStatus; // 海报文件状态
     std::string          nfoPath;      // NFO文件路径

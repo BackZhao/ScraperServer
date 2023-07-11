@@ -5,6 +5,8 @@
 #include <Poco/JSON/Object.h>
 
 
+// TODO: 接口设计上优化形参, 部分接口设置不够合理
+
 void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::Object& outJson);
 
 void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::Object& outJson);
@@ -17,7 +19,7 @@ void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON
  * @return true 
  * @return false 
  */
-bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath);
+bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool setHDRTitle);
 
 /**
  * @brief 解析NFO文件

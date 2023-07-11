@@ -9,6 +9,8 @@
 #include <Poco/DOM/Document.h>
 #include <Poco/AutoPtr.h>
 #include <Poco/SortedDirectoryIterator.h>
+#include <Poco/Process.h>
+#include <Poco/Pipe.h>
 
 #include "DataConvert.h"
 #include "Logger.h"
@@ -38,12 +40,21 @@ bool DataSource::IsNfoFormatMatch(const std::string& nfoPath)
     };
 
     // 获取根节点
-    DOMParser         parser;
-    AutoPtr<Document> dom         = parser.parse(nfoPath);
-    auto              rootElement = dom->documentElement();
-
-    // 根节点名称必须在指定范围内
-    return nodeNames.find(rootElement->nodeName()) != nodeNames.end();
+    try {
+        DOMParser         parser;
+        AutoPtr<Document> dom         = parser.parse(nfoPath);
+        auto              rootElement = dom->documentElement();
+        // 根节点名称必须在指定范围内
+        if (nodeNames.find(rootElement->nodeName()) == nodeNames.end()) {
+            LOG_DEBUG("Nfo root node's name({}) doesn't match, path: {}", rootElement->nodeName(), nfoPath);
+            return false;
+        } else {
+            return true;
+        }
+    } catch (Poco::Exception& e) {
+        LOG_ERROR("Nfo parsed failed, reason: {}, path: {}", e.displayText(), nfoPath);
+        return false;
+    }
 }
 
 bool DataSource::IsJpgCompleted(const std::string& posterName)
@@ -74,6 +85,52 @@ bool DataSource::IsJpgCompleted(const std::string& posterName)
     return true;
 }
 
+void GetHdrFormat(VideoInfo& videoInfo)
+{
+    // TODO: 使用动态库接口调用代替子进程调用
+    Poco::Process::Args args;
+    args.push_back("--Inform=Video;%HDR_Format_Commercial%");
+    args.push_back(videoInfo.videoPath);
+
+    Poco::Pipe          outPipe;
+    Poco::ProcessHandle processHandler(Poco::Process::launch("mediainfo", args, nullptr, &outPipe, nullptr));
+
+    // 回收子进程mediainfo
+    int exitCode = processHandler.wait();
+    if (exitCode != 0) {
+        LOG_ERROR("Child process for mediainfo return error: pid {}, code {}", processHandler.id(), exitCode);
+    } else {
+        LOG_TRACE("Recycled child process(PID: {}) for {}", processHandler.id(), videoInfo.videoPath);
+    }
+
+    std::vector<char> v(8192);
+    int               len = outPipe.readBytes(&v[0], 8192);
+    outPipe.close();
+    std::string result;
+    for (int i = 0; i < len; i++) {
+        result += v[i];
+    }
+
+    // mediainfo打印的HDR_Format_Commercial可能结果
+    static const std::string DV_FORMAT           = "Dolby Vision\n";   // DV
+    static const std::string HDR10_FORMAT        = "HDR10\n";          // HDR10
+    static const std::string HDR10Plus_FORMAT    = "HDR10+\n";         // HDR10
+    static const std::string DV_AND_HDR10_FORMAT = "HDR10 / HDR10+\n"; // DV + HDR10
+
+    if (result == DV_AND_HDR10_FORMAT) {
+        videoInfo.hdrType = DOLBY_VISION_AND_HDR10;
+    } else if (result == DV_FORMAT) {
+        videoInfo.hdrType = DOLBY_VISION;
+    } else if (result == HDR10_FORMAT) {
+        videoInfo.hdrType = HDR10;
+    } else if (result == HDR10Plus_FORMAT) {
+        videoInfo.hdrType = HDR10Plus;
+    } else {
+        videoInfo.hdrType = NON_HDR;
+    }
+}
+
+// TODO: 检查是否有多个匹配的海报和nfo文件(依据Kodi的wiki说明)
 void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
 {
     // 检查NFO文件是否存在
@@ -115,9 +172,11 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
             videoInfo.posterPath = baseNameWithDir + "-poster.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
+            GetHdrFormat(videoInfo);
             break;
         }
 
+        // TODO: 支持TV的HDR检测
         case TV: {
             const std::string& dirName = videoInfo.videoPath + Poco::Path::separator();
             videoInfo.nfoPath          = dirName + "tvshow.nfo";

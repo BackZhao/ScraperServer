@@ -17,12 +17,13 @@ public:
 
     static void Cancel();
 
+    static void CheckVideoStatus(VideoInfo& videoInfo);
+
 private:
 
     static bool IsVideo(const std::string& suffix);
     static bool IsNfoFormatMatch(const std::string& nfoPath);
     static bool IsJpgCompleted(const std::string& posterPath);
-    static void CheckVideoStatus(VideoInfo& videoInfo);
 
     static std::string GetLargestFile(const std::string& path);
 
