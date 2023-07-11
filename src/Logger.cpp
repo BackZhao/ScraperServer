@@ -14,9 +14,9 @@ bool Logger::Init(spdlog::level::level_enum level, const std::string& logFile, s
     // Debug等级及以下需要打印源代码文件名和行数
     std::string pattern;
     if (level <= spdlog::level::debug) {
-        pattern = "%Y-%m-%d %H:%M:%S %^%L%$ %v [%s:%#]";
+        pattern = "%Y-%m-%d %H:%M:%S [%^%L%$] %v [%s:%#]";
     } else {
-        pattern = "%Y-%m-%d %H:%M:%S %^%L%$ %v";
+        pattern = "%Y-%m-%d %H:%M:%S [%^%L%$] %v";
     }
 
     if (m_logger != nullptr) {
