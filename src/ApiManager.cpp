@@ -132,7 +132,13 @@ void ApiManager::List(const Poco::JSON::Object &param, std::ostream &out)
 
     Poco::JSON::Array           outJsonArr;
     std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
-    if (locker.owns_lock() && m_scanInfos[videoType].scanStatus != NEVER_SCANNED) {
+    if (!locker.owns_lock()) {
+        out << R"({"success": false, "msg": "Scanning/refreshing job is still unfinished!"})";
+        return;
+    } else if (m_scanInfos[videoType].scanStatus == NEVER_SCANNED) {
+        out << R"({"success": false, "msg": "The datasource has never been scanned, please scan first!"})";
+        return;
+    } else {
         for (std::size_t i = 0; i < m_videoInfos.at(videoType).size(); i++) {
             const auto& videoInfo = m_videoInfos.at(videoType).at(i);
             Poco::JSON::Object jsonObj;
@@ -159,7 +165,10 @@ void ApiManager::List(const Poco::JSON::Object &param, std::ostream &out)
         }
     }
 
-    outJsonArr.stringify(out);
+    Poco::JSON::Object outJsonObj;
+    outJsonObj.set("success", "true");
+    outJsonObj.set("list", outJsonArr);
+    outJsonObj.stringify(out);
 }
 
 void ApiManager::Detail(const Poco::JSON::Object &param, std::ostream &out)
