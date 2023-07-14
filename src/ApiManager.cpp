@@ -71,7 +71,9 @@ void ApiManager::ScanResult(const Poco::JSON::Object&, std::ostream &out)
         auto& scanInfo = scanInfoPair.second;
         std::unique_lock<std::mutex> locker(scanInfo.lock, std::try_to_lock);
         if (!locker.owns_lock()) { // 避免原子性问题
-            scanInfoJsonObj.set("ScanStatus", static_cast<int>(NEVER_SCANNED));
+            scanInfoJsonObj.set("ScanStatus", static_cast<int>(SCANNING));
+            scanInfoJsonObj.set("ScanBeginTime",
+                                Poco::DateTimeFormatter::format(scanInfo.scanBeginTime, "%Y-%m-%d %H:%M:%S"));
         } else if (scanInfo.scanStatus == NEVER_SCANNED) {
             scanInfoJsonObj.set("ScanStatus", static_cast<int>(scanInfo.scanStatus));
         } else {
