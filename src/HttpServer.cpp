@@ -9,7 +9,7 @@
 
 #include <functional>
 
-int HTTPServerApp::m_signum = -1;
+std::atomic<int> HTTPServerApp::m_signum(-1);
 
 void HTTPServerApp::AutoUpdate()
 {
@@ -17,7 +17,7 @@ void HTTPServerApp::AutoUpdate()
 
     LOG_INFO("Auto update interval: {}s", Config::Instance().GetAutoInterval());
 
-    while (m_signum == -1) {
+    while (m_signum.load() == -1) {
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {
             Poco::JSON::Object jsonObj;
@@ -32,9 +32,9 @@ void HTTPServerApp::AutoUpdate()
 
 void HTTPServerApp::SignalHandler(int signum)
 {
-    LOG_INFO("Signal recieved: {}", m_signum);
+    m_signum.store(signum);
+    LOG_INFO("Signal recieved: {}", signum);
     DataSource::Cancel();
-    m_signum = signum;
 }
 
 int HTTPServerApp::run()
@@ -66,7 +66,7 @@ int HTTPServerApp::run()
     signal(SIGINT, SignalHandler);
     signal(SIGTERM, SignalHandler);
     // 等待捕获信号
-    while (m_signum == -1) {
+    while (m_signum.load() == -1) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
