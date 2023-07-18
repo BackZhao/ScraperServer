@@ -3,17 +3,19 @@
 #include <algorithm>
 #include <fstream>
 #include <functional>
+#include <locale>
 #include <set>
+#include <string>
 
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
 #include <Poco/AutoPtr.h>
 #include <Poco/SortedDirectoryIterator.h>
-#include <Poco/Process.h>
-#include <Poco/Pipe.h>
 
 #include "DataConvert.h"
 #include "Logger.h"
+
+#include <MediaInfoDLL/MediaInfoDLL.h>
 
 using namespace Poco::XML;
 using Poco::AutoPtr;
@@ -87,47 +89,41 @@ bool DataSource::IsJpgCompleted(const std::string& posterName)
 
 void GetHdrFormat(VideoInfo& videoInfo)
 {
-    // TODO: 使用动态库接口调用代替子进程调用
-    Poco::Process::Args args;
-    args.push_back("--Inform=Video;%HDR_Format_Commercial%");
-    args.push_back(videoInfo.videoPath);
+    using namespace MediaInfoDLL;
 
-    Poco::Pipe          outPipe;
-    Poco::ProcessHandle processHandler(Poco::Process::launch("mediainfo", args, nullptr, &outPipe, nullptr));
-
-    // 回收子进程mediainfo
-    int exitCode = processHandler.wait();
-    if (exitCode != 0) {
-        LOG_ERROR("Child process for mediainfo return error: pid {}, code {}", processHandler.id(), exitCode);
-    } else {
-        LOG_TRACE("Recycled child process(PID: {}) for {}", processHandler.id(), videoInfo.videoPath);
+    MediaInfo mi;
+    std::setlocale(LC_ALL, "en_US.utf8");
+    if (mi.Open(videoInfo.videoPath) <= 0) {
+        LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+        return;
     }
 
-    std::vector<char> v(8192);
-    int               len = outPipe.readBytes(&v[0], 8192);
-    outPipe.close();
-    std::string result;
-    for (int i = 0; i < len; i++) {
-        result += v[i];
+    if (mi.Count_Get(Stream_Video) < 1) {
+        LOG_ERROR("Video stream not found with MediaInfoLib, set as NON-HDR! path: {}", videoInfo.videoPath);
+        return;
     }
+
+    std::string hdrFormat = mi.Get(Stream_Video, 0, "HDR_Format_Commercial");
 
     // mediainfo打印的HDR_Format_Commercial可能结果
-    static const std::string DV_FORMAT           = "Dolby Vision\n";   // DV
-    static const std::string HDR10_FORMAT        = "HDR10\n";          // HDR10
-    static const std::string HDR10Plus_FORMAT    = "HDR10+\n";         // HDR10
-    static const std::string DV_AND_HDR10_FORMAT = "HDR10 / HDR10+\n"; // DV + HDR10
+    static const std::string DV_FORMAT           = "Dolby Vision";   // DV
+    static const std::string HDR10_FORMAT        = "HDR10";          // HDR10
+    static const std::string HDR10Plus_FORMAT    = "HDR10+";         // HDR10
+    static const std::string DV_AND_HDR10_FORMAT = "HDR10 / HDR10+"; // DV + HDR10
 
-    if (result == DV_AND_HDR10_FORMAT) {
+    if (hdrFormat == DV_AND_HDR10_FORMAT) {
         videoInfo.hdrType = DOLBY_VISION_AND_HDR10;
-    } else if (result == DV_FORMAT) {
+    } else if (hdrFormat == DV_FORMAT) {
         videoInfo.hdrType = DOLBY_VISION;
-    } else if (result == HDR10_FORMAT) {
+    } else if (hdrFormat == HDR10_FORMAT) {
         videoInfo.hdrType = HDR10;
-    } else if (result == HDR10Plus_FORMAT) {
+    } else if (hdrFormat == HDR10Plus_FORMAT) {
         videoInfo.hdrType = HDR10Plus;
     } else {
         videoInfo.hdrType = NON_HDR;
     }
+
+    LOG_DEBUG("HDR type(parsed): {}, HDR format(MediaInfoLib): {}, path: {}", videoInfo.hdrType, hdrFormat, videoInfo.videoPath);
 }
 
 // TODO: 检查是否有多个匹配的海报和nfo文件(依据Kodi的wiki说明)

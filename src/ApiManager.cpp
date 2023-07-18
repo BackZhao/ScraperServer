@@ -269,6 +269,77 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
     out << R"({"success": true})";
 }
 
+void ApiManager::ProcessRefresh(VideoType videoType)
+{
+    ProcessScan(videoType);
+
+    std::unique_lock<std::mutex> locker(m_refreshInfos[videoType].lock, std::try_to_lock);
+    m_refreshInfos[videoType].refreshStatus = REFRESHING;
+    m_refreshInfos[videoType].refreshBeginTime = Poco::DateTime();
+    if (videoType == MOVIE) {
+        RefreshMovie();
+    }
+    m_refreshInfos[videoType].refreshEndTime = Poco::DateTime();
+    m_refreshInfos[videoType].refreshStatus  = REFRESHING_FINISHED;
+}
+
+void ApiManager::Refresh(const Poco::JSON::Object &param, std::ostream &out)
+{
+    if (param.isNull("videoType")) {
+        out << R"({"success": false, "msg": "Video type is not given!"})";
+        return;
+    }
+
+    auto findResult = STR_TO_VIDEO_TYPE.find(param.get("videoType"));
+    if (findResult == STR_TO_VIDEO_TYPE.end()) {
+        out << R"({"success": false, "msg": "Video type is invalid!"})";
+        return;
+    }
+    VideoType videoType = findResult->second;
+
+    // 无法加锁说明后台正在扫描
+    std::unique_lock<std::mutex> locker(m_scanInfos[videoType].lock, std::try_to_lock);
+    if (!locker.owns_lock()) {
+        out << R"({"success": false, "msg": "Still refreshing!"})";
+        return;
+    }
+
+    // 加锁后在新线程进行扫描
+    std::thread scanThread(std::bind(&ApiManager::ProcessRefresh, this, std::placeholders::_1), videoType);
+    scanThread.detach();
+
+    out << R"({"success": true})";
+}
+
+void ApiManager::RefreshResult(const Poco::JSON::Object &, std::ostream &out)
+{
+    Poco::JSON::Array outJsonArr;
+    for (auto &refreshInfoPair : m_refreshInfos) {
+        Poco::JSON::Object refreshInfoJsonObj;
+        refreshInfoJsonObj.set("VideoType", VIDEO_TYPE_TO_STR.at(refreshInfoPair.first));
+        auto                        &refreshInfo = refreshInfoPair.second;
+        std::unique_lock<std::mutex> locker(refreshInfo.lock, std::try_to_lock);
+        if (!locker.owns_lock()) { // 避免原子性问题
+            refreshInfoJsonObj.set("RefreshStatus", static_cast<int>(REFRESHING));
+            refreshInfoJsonObj.set("RefreshBeginTime",
+                                   Poco::DateTimeFormatter::format(refreshInfo.refreshBeginTime, "%Y-%m-%d %H:%M:%S"));
+        } else if (refreshInfo.refreshStatus == NEVER_REFRESHED) {
+            refreshInfoJsonObj.set("RefreshStatus", static_cast<int>(refreshInfo.refreshStatus));
+        } else {
+            refreshInfoJsonObj.set("RefreshStatus", static_cast<int>(refreshInfo.refreshStatus));
+            refreshInfoJsonObj.set("RefreshBeginTime",
+                                   Poco::DateTimeFormatter::format(refreshInfo.refreshBeginTime, "%Y-%m-%d %H:%M:%S"));
+            refreshInfoJsonObj.set("RefreshEndTime",
+                                   Poco::DateTimeFormatter::format(refreshInfo.refreshEndTime, "%Y-%m-%d %H:%M:%S"));
+            refreshInfoJsonObj.set("TotalVideos",
+                                   static_cast<std::size_t>(m_videoInfos.at(refreshInfoPair.first).size()));
+        }
+        outJsonArr.add(refreshInfoJsonObj);
+    }
+
+    outJsonArr.stringify(out);
+}
+
 void ApiManager::AutoUpdateTV()
 {
     if (m_videoInfos.at(TV).empty()) {

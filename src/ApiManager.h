@@ -42,6 +42,35 @@ class ApiManager
         std::mutex          lock;
     };
 
+    enum RefreshStatus {
+        NEVER_REFRESHED,
+        REFRESHING,
+        REFRESHING_FINISHED,
+    };
+    /**
+     * @brief
+     *
+     */
+    struct RefreshInfo {
+        RefreshInfo() : refreshStatus(NEVER_REFRESHED)
+        {
+            // non-param constructor
+        }
+
+        RefreshInfo(const RefreshInfo &other)
+            : refreshStatus(other.refreshStatus), refreshBeginTime(other.refreshBeginTime),
+              refreshEndTime(other.refreshEndTime), clientAddr(other.clientAddr)
+        {
+            // copy constructor
+        }
+
+        RefreshStatus       refreshStatus;
+        Poco::LocalDateTime refreshBeginTime;
+        Poco::LocalDateTime refreshEndTime;
+        std::string         clientAddr;
+        std::mutex          lock;
+    };
+
 public:
 
     using ApiHandler = std::function<void(const Poco::JSON::Object &, std::ostream &)>;
@@ -62,8 +91,11 @@ public:
     void List(const Poco::JSON::Object &param, std::ostream &out);
     void Detail(const Poco::JSON::Object &param, std::ostream &out);
     void Scrape(const Poco::JSON::Object &param, std::ostream &out);
+    void Refresh(const Poco::JSON::Object &param, std::ostream &out);
     void AutoUpdateTV();
 
+    void ProcessRefresh(VideoType videoType);
+    void RefreshResult(const Poco::JSON::Object &, std::ostream &out);
     void RefreshMovie();
     void RefreshTV();
 
@@ -83,6 +115,12 @@ private:
             {MOVIE_SET, ScanInfo()},
             {TV, ScanInfo()},
         };
+
+        m_refreshInfos = {
+            {MOVIE, RefreshInfo()},
+            {MOVIE_SET, RefreshInfo()},
+            {TV, RefreshInfo()},
+        };
     };
 
 private:
@@ -90,4 +128,5 @@ private:
     std::map<VideoType, std::vector<std::string>> m_paths;
     std::map<VideoType, std::vector<VideoInfo>>   m_videoInfos;
     std::map<VideoType, ScanInfo>                 m_scanInfos;
+    std::map<VideoType, RefreshInfo>              m_refreshInfos;
 };
