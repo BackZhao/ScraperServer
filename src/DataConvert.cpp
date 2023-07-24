@@ -21,9 +21,8 @@ using Poco::AutoPtr;
 using namespace Poco::XML;
 using namespace Poco::JSON;
 
-void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Object& outJson)
+void VideoInfoToBriefJson(const VideoInfo& videoInfo, Object& outJson)
 {
-    outJson.set("Id", id);
     outJson.set("VideoType", VIDEO_TYPE_TO_STR.at(videoInfo.videoType));
     outJson.set("VideoPath", videoInfo.videoPath);
     outJson.set("NfoStatus", static_cast<int>(videoInfo.nfoStatus));
@@ -39,16 +38,26 @@ void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Object& outJs
     outJson.set("HDRType", hdrEnumToStr.at(videoInfo.hdrType));
 }
 
-void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Object& outJson)
+void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Object& outJson)
 {
-    VideoInfoToBriefJson(id, videoInfo, outJson);
-
+    VideoInfoToBriefJson(videoInfo, outJson);
+    outJson.set("VideoPath", videoInfo.videoPath);
     outJson.set("NfoPath", videoInfo.nfoPath);
     outJson.set("PosterPath", videoInfo.posterPath);
 
+    Object videoDetailJson;
+    if (videoInfo.videoType == TV) {
+        videoDetailJson.set("EpisodeNfoCount", videoInfo.videoDetail.episodeNfoCount);
+        videoDetailJson.set("EpisodeCount", videoInfo.videoDetail.episodePaths.size());
+        Array episodePathsArrJson;
+        for (const auto& episodePath : videoInfo.videoDetail.episodePaths) {
+            episodePathsArrJson.add(episodePath);
+        }
+        videoDetailJson.set("EpisodePaths", episodePathsArrJson);
+    }
+
     // 如果NFO文件格式匹配, 则额外填写NFO的信息
     if (videoInfo.nfoStatus == NFO_FORMAT_MATCH) {
-        Object videoDetailJson;
         videoDetailJson.set("Title", videoInfo.videoDetail.title);
         videoDetailJson.set("OriginalTitle", videoInfo.videoDetail.originaltitle);
 
@@ -97,17 +106,9 @@ void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Object& ou
         if (videoInfo.videoType == TV) {
             videoDetailJson.set("SeasonNumber", videoInfo.videoDetail.seasonNumber);
             videoDetailJson.set("Status", videoInfo.videoDetail.isEnded ? "Ended" : "Continuing");
-            videoDetailJson.set("EpisodeNfoCount", videoInfo.videoDetail.episodeNfoCount);
-            videoDetailJson.set("EpisodeCount", videoInfo.videoDetail.episodePaths.size());
-            Array episodePathsArrJson;
-            for (const auto& episodePath : videoInfo.videoDetail.episodePaths) {
-                episodePathsArrJson.add(episodePath);
-            }
-            videoDetailJson.set("EpisodePaths", episodePathsArrJson);
         }
-
-        outJson.set("VideoDetail", videoDetailJson);
     }
+    outJson.set("VideoDetail", videoDetailJson);
 }
 
 bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool setHDRTitle)
@@ -309,9 +310,15 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
 
 bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
 {
-    Parser      parser;
-    auto        result  = parser.parse(sS);
-    Object::Ptr jsonPtr = result.extract<Object::Ptr>();
+    Object::Ptr jsonPtr = nullptr;
+    try {
+        Parser parser;
+        auto   result = parser.parse(sS);
+        jsonPtr       = result.extract<Object::Ptr>();
+    } catch (Poco::Exception& e) {
+        LOG_ERROR("Movie detail json parse failed, text as fllows: ");
+        std::cout << sS.str() << std::endl;
+    }
 
     videoDetail.title          = jsonPtr->getValue<std::string>("title");
     videoDetail.originaltitle  = jsonPtr->getValue<std::string>("original_title");
@@ -347,11 +354,98 @@ bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDet
     return true;
 }
 
+bool ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail, int seasonId)
+{
+    Object::Ptr jsonPtr = nullptr;
+    try {
+        Parser parser;
+        auto   result = parser.parse(sS);
+        jsonPtr       = result.extract<Object::Ptr>();
+    } catch (Poco::Exception& e) {
+        LOG_ERROR("TV detail json parse failed, text as fllows: ");
+        std::cout << sS.str() << std::endl;
+        return false;
+    }
+
+    // 获取指定的季
+    Object::Ptr selectedSeason = nullptr;
+    auto seasonArr = jsonPtr->getArray("seasons");
+    for (size_t i = 0; i < seasonArr->size(); i++) {
+        auto season = seasonArr->getObject(i);
+        if (season->getValue<int>("season_number") == seasonId) {
+            selectedSeason = season;
+            break;
+        } 
+    }
+    if (selectedSeason == nullptr) {
+        LOG_ERROR("Could not found given season id!");
+        return false;
+    }
+    static std::set<std::string> seasonOne = {
+        "第一部", "第1部", "第 1 部",
+        "第一季", "第1季", "第 1 季",
+        "SEASON ONE", "SEASON1", "SEASON 1",
+    };
+    auto iter = seasonOne.find(selectedSeason->getValue<std::string>("name"));
+    if ( iter != seasonOne.end() || seasonId == 1 ) { // 第一部不加序号
+        videoDetail.title = jsonPtr->getValue<std::string>("name");
+    } else {
+        videoDetail.title = jsonPtr->getValue<std::string>("name") + std::to_string(seasonId);
+    }
+
+    const std::string imageUrl =
+        Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
+    if (selectedSeason->isNull("poster_path")) {
+        if (!jsonPtr->getValue<std::string>("poster_path").empty()) {
+            videoDetail.posterUrl = imageUrl + jsonPtr->getValue<std::string>("poster_path");
+        }
+    } else {
+        videoDetail.posterUrl = imageUrl + selectedSeason->getValue<std::string>("poster_path");
+    }
+
+    if (selectedSeason->getValue<std::string>("overview").empty()) {
+        videoDetail.plot = jsonPtr->getValue<std::string>("overview");
+    } else {
+        videoDetail.plot = selectedSeason->getValue<std::string>("overview");
+    }
+
+    videoDetail.originaltitle  = jsonPtr->getValue<std::string>("original_name");
+    videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
+    videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
+    videoDetail.uniqueid       = jsonPtr->getValue<int>("id");
+
+    auto genreJsonPtr = jsonPtr->getArray("genres");
+    for (std::size_t i = 0; i < genreJsonPtr->size(); i++) {
+        videoDetail.genre.push_back(genreJsonPtr->getObject(i)->getValue<std::string>("name"));
+    }
+
+    auto contriesJsonPtr = jsonPtr->getArray("production_countries");
+    for (std::size_t i = 0; i < contriesJsonPtr->size(); i++) {
+        const std::string& code = contriesJsonPtr->getObject(i)->getValue<std::string>("iso_3166_1");
+        videoDetail.countries.push_back(CODE_TO_STR.at(code));
+    }
+
+    videoDetail.premiered = jsonPtr->getValue<std::string>("first_air_date");
+
+    auto studioJsonArrPtr = jsonPtr->getArray("production_companies");
+    for (std::size_t i = 0; i < studioJsonArrPtr->size(); i++) {
+        videoDetail.studio.push_back(studioJsonArrPtr->getObject(i)->getValue<std::string>("name"));
+    }
+
+    return true;
+}
+
 bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
 {
-    Parser      parser;
-    auto        result  = parser.parse(sS);
-    Object::Ptr jsonPtr = result.extract<Object::Ptr>();
+    Object::Ptr jsonPtr = nullptr;
+    try {
+        Parser parser;
+        auto   result = parser.parse(sS);
+        jsonPtr       = result.extract<Object::Ptr>();
+    } catch (Poco::Exception& e) {
+        LOG_ERROR("Credits json parse failed, text as fllows: ");
+        std::cout << sS.str() << std::endl;
+    }
 
     const std::string imageUrl =
         Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
@@ -386,14 +480,15 @@ bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
     return true;
 }
 
-bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths)
+bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths, int seasonId)
 {
     // TODO: 如果TMDB提供的剧集数量与本地数量不符, 是否使用内置规则生成默认标题
     bool isEpisodeCountMatch = false;
     if (jsonArrPtr->size() == episodePaths.size()) {
         isEpisodeCountMatch = true;
     } else {
-        LOG_WARN("TMDB API returns mismatched episode count, using default rules to generate title!");
+        LOG_WARN("TMDB API returns mismatched episode count, using default rules to generate title! api: {}, local: {}",
+                 jsonArrPtr->size(), episodePaths.size());
     }
 
     for (size_t i = 0; i < episodePaths.size(); i++) {
@@ -419,14 +514,22 @@ bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>
             parent->appendChild(ele);
         };
 
-        auto        episodeJsonPtr = jsonArrPtr->getObject(i);
-        std::string title =
-            isEpisodeCountMatch ? episodeJsonPtr->getValue<std::string>("name") : "第" + std::to_string(i + 1) + "集";
-        createAndAppendText(rootEle, "title", title);
+        if (isEpisodeCountMatch) {
+            auto        episodeJsonPtr = jsonArrPtr->getObject(i);
+            std::string title          = isEpisodeCountMatch ? episodeJsonPtr->getValue<std::string>("name")
+                                                             : "第" + std::to_string(i + 1) + "集";
+            createAndAppendText(rootEle, "title", title);
 
-        createAndAppendText(rootEle, "season", std::to_string(episodeJsonPtr->getValue<int>("season_number")));
-        createAndAppendText(rootEle, "episode", std::to_string(episodeJsonPtr->getValue<int>("episode_number")));
-        createAndAppendText(rootEle, "plot", episodeJsonPtr->getValue<std::string>("overview"));
+            createAndAppendText(rootEle, "season", std::to_string(episodeJsonPtr->getValue<int>("season_number")));
+            createAndAppendText(rootEle, "episode", std::to_string(episodeJsonPtr->getValue<int>("episode_number")));
+            createAndAppendText(rootEle, "plot", episodeJsonPtr->getValue<std::string>("overview"));
+        } else {
+            createAndAppendText(rootEle, "title", "第" + std::to_string(i + 1) + "集");
+
+            createAndAppendText(rootEle, "season", std::to_string(seasonId));
+            createAndAppendText(rootEle, "episode", std::to_string(i));
+            createAndAppendText(rootEle, "plot", "");
+        }
         // TODO: 添加更多详细标签
 
         DOMWriter writer;

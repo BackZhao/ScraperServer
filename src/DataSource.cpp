@@ -93,9 +93,30 @@ void GetHdrFormat(VideoInfo& videoInfo)
 
     MediaInfo mi;
     std::setlocale(LC_ALL, "en_US.utf8");
-    if (mi.Open(videoInfo.videoPath) <= 0) {
-        LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
-        return;
+
+    switch (videoInfo.videoType) {
+        case MOVIE: {
+            if (mi.Open(videoInfo.videoPath) <= 0) {
+                LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+                return;
+            }
+            break;
+        }
+        case TV: {
+            if (videoInfo.videoDetail.episodePaths.size() > 0) {
+                // 以第一集的HDR类型填写
+                if (mi.Open(videoInfo.videoDetail.episodePaths.at(0)) <= 0) {
+                    LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+                    return;
+                }
+            } else {
+                LOG_ERROR("No eposide found! path: {}", videoInfo.videoPath);
+                videoInfo.hdrType = NON_HDR;
+            }
+            break;
+        }
+        default:
+            break;
     }
 
     if (mi.Count_Get(Stream_Video) < 1) {
@@ -180,6 +201,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
             CheckEpisodes();
+            GetHdrFormat(videoInfo);
             break;
         }
 
@@ -310,6 +332,7 @@ bool DataSource::Scan(VideoType                                            video
     };
     /* clang-format on */
 
+    // TODO: paths索引检测
     return scanFunc.at(videoType)(paths.at(videoType), videoInfos.at(videoType));
 }
 

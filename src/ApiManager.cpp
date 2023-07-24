@@ -160,7 +160,8 @@ void ApiManager::List(const Poco::JSON::Object &param, std::ostream &out)
                 default:
                     break;
             }
-            VideoInfoToBriefJson(i, videoInfo, jsonObj);
+            jsonObj.set("id", i);
+            VideoInfoToBriefJson(videoInfo, jsonObj);
             outJsonArr.add(jsonObj);
         }
     }
@@ -198,7 +199,8 @@ void ApiManager::Detail(const Poco::JSON::Object &param, std::ostream &out)
             out << R"({"success": false, "msg": "Id is out of range!"})";
             return;
         }
-        VideoInfoToDetailedJson(id, m_videoInfos.at(videoType).at(id), outJsonObj);
+        outJsonObj.set("id", id);
+        VideoInfoToDetailedJson(m_videoInfos.at(videoType).at(id), outJsonObj);
     }
 
     outJsonObj.stringify(out);
@@ -229,44 +231,48 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
     VideoType videoType = findResult->second;
 
     std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
-    if (locker.owns_lock() && m_scanInfos[videoType].scanStatus != NEVER_SCANNED) {
-        size_t id = std::stoull(param.getValue<std::string>("id"));
-        if (id >= m_videoInfos.at(videoType).size()) { // 防止ID越界
-            out << R"({"success": false, "msg": "Id is out of range!"})";
-            return;
-        }
-
-        auto &videoInfo                = m_videoInfos.at(videoType).at(id);
-        videoInfo.videoDetail.uniqueid = std::stoi(param.getValue<std::string>("tmdbid"));
-        std::stringstream sS;
-        // TODO: 添加刮削电视剧
-        if (!GetMovieDetail(sS, videoInfo.videoDetail.uniqueid)) {
-            out << R"({"success": false, "msg": "Get movie detail failed!"})";
-            return;
-        }
-        if (!ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail)) {
-            out << R"({"success": false, "msg": "Parse movie detail failed!"})";
-            return;
-        }
-        if (!GetMovieCredits(sS, videoInfo.videoDetail.uniqueid)) {
-            out << R"({"success": false, "msg": "Get movie credits failed!"})";
-            return;
-        }
-        if (!ParseCreditsToVideoDetail(sS, videoInfo.videoDetail)) {
-            out << R"({"success": false, "msg": "Parse movie credits failed!"})";
-            return;
-        }
-        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true)) {
-            out << R"({"success": false, "msg": "Write nfo failed!"})";
-            return;
-        }
-        if (!DownloadPoster(videoInfo)) {
-            out << R"({"success": false, "msg": "Download poster failed!"})";
-            return;
-        }
+    if (!locker.owns_lock()) {
+        out << R"({"success": false, "msg": "Still scanning in background!"})";
+        return;
     }
 
-    out << R"({"success": true})";
+    if (m_scanInfos[videoType].scanStatus == NEVER_SCANNED) {
+        out << R"({"success": false, "msg": "Never scanned!"})";
+        return;
+    }
+
+    size_t id = std::stoull(param.getValue<std::string>("id"));
+    if (id >= m_videoInfos.at(videoType).size()) { // 防止ID越界
+        out << R"({"success": false, "msg": "Id is out of range!"})";
+        return;
+    }
+
+    // 电视剧需要给定季编号
+    int seasonId = 0;
+    if (videoType == TV) {
+        if (!param.has("seasonId")) {
+            out << R"({"success": false, "msg": "TV should give season id!"})";
+            return;
+        }
+        seasonId = std::stoi(param.getValue<std::string>("seasonId"));
+    }
+
+    auto &videoInfo                = m_videoInfos.at(videoType).at(id);
+    videoInfo.videoDetail.uniqueid = std::stoi(param.getValue<std::string>("tmdbid"));
+    std::stringstream sS;
+    switch (videoType) {
+        case MOVIE: {
+            ScrapeMovie(videoInfo, out);
+            return;
+        }
+        case TV: {
+            ScrapeTV(videoInfo, out, seasonId);
+            return;
+        }
+        default:
+            out << R"({"success": false, "msg": "Unsupported video type!"})";
+            return;
+    }
 }
 
 void ApiManager::ProcessRefresh(VideoType videoType)
@@ -278,6 +284,8 @@ void ApiManager::ProcessRefresh(VideoType videoType)
     m_refreshInfos[videoType].refreshBeginTime = Poco::DateTime();
     if (videoType == MOVIE) {
         RefreshMovie();
+    } else if (videoType == TV) {
+        RefreshTV();
     }
     m_refreshInfos[videoType].refreshEndTime = Poco::DateTime();
     m_refreshInfos[videoType].refreshStatus  = REFRESHING_FINISHED;
@@ -378,49 +386,19 @@ void ApiManager::RefreshMovie()
     int failedCount = 0;
     int nfoMisCount = 0;
 
-    for (auto &oldVideoInfo : m_videoInfos.at(MOVIE)) {
-        if (oldVideoInfo.nfoStatus != NFO_FORMAT_MATCH) {
-            LOG_DEBUG("Nfo file incorrect, skipped: {}", oldVideoInfo.videoPath);
+    for (auto &videoInfo : m_videoInfos.at(MOVIE)) {
+        if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+            LOG_DEBUG("Nfo file incorrect, skipped: {}", videoInfo.videoPath);
             nfoMisCount++;
-            nfoMisVec.push_back(oldVideoInfo.videoPath);
+            nfoMisVec.push_back(videoInfo.videoPath);
             continue;
         }
 
-        // TODO: 后续取消XML全解析即可优化此处
-        VideoInfo videoInfo(oldVideoInfo.videoType, oldVideoInfo.videoPath);
-        videoInfo.nfoPath = oldVideoInfo.nfoPath;
-        videoInfo.hdrType = oldVideoInfo.hdrType;
-        videoInfo.videoDetail.uniqueid = oldVideoInfo.videoDetail.uniqueid;
-
-        LOG_DEBUG("Refreshing movie nfo: {}", videoInfo.videoPath);
-
-        std::stringstream sS;
-        if (!GetMovieDetail(sS, videoInfo.videoDetail.uniqueid)) {
-            failedCount++;
+        // TODO: API接口调整
+        if (!ScrapeMovie(videoInfo, std::cout)) {
             failedVec.push_back(videoInfo.videoPath);
             continue;
         }
-        if (!ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail)) {
-            failedCount++;
-            failedVec.push_back(videoInfo.videoPath);
-            continue;
-        }
-        if (!GetMovieCredits(sS, videoInfo.videoDetail.uniqueid)) {
-            failedCount++;
-            failedVec.push_back(videoInfo.videoPath);
-            continue;
-        }
-        if (!ParseCreditsToVideoDetail(sS, videoInfo.videoDetail)) {
-            failedCount++;
-            failedVec.push_back(videoInfo.videoPath);
-            continue;
-        }
-        if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true)) {
-            failedCount++;
-            failedVec.push_back(videoInfo.videoPath);
-            continue;
-        }
-
         successCount++;
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         LOG_INFO("Progress:\t{}/{}", successCount + failedCount + nfoMisCount, m_videoInfos.at(MOVIE).size());
@@ -448,4 +426,53 @@ void ApiManager::RefreshTV()
         LOG_WARN("Empty tv show in datasource, scan first or add new!");
         return;
     }
+
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(TV).lock, std::try_to_lock);
+
+    LOG_DEBUG("Refreshing tv nfos...");
+    std::vector<std::string> failedVec;
+    std::vector<std::string> nfoMisVec;
+    int                      successCount = 0;
+    int                      failedCount  = 0;
+    int                      nfoMisCount  = 0;
+
+    for (auto &videoInfo : m_videoInfos.at(TV)) {
+        if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+            LOG_DEBUG("Nfo file incorrect, skipped: {}", videoInfo.videoPath);
+            nfoMisCount++;
+            nfoMisVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+
+        LOG_DEBUG("Refreshing TV nfo: {}", videoInfo.videoPath);
+
+        // TODO: API接口调整
+        if (!ScrapeTV(videoInfo, std::cout, videoInfo.videoDetail.seasonNumber)) {
+            failedVec.push_back(videoInfo.videoPath);
+            continue;
+        }
+
+        successCount++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        LOG_INFO("\nProgress:\t{}/{}", successCount + failedCount + nfoMisCount, m_videoInfos.at(TV).size());
+    }
+
+    printf("TV refresh summary:\n\tTotal: %lu\n\tSuccess: %d\n\tFailed: %d\n\tNfoMis: %d\n",
+           m_videoInfos.at(TV).size(),
+           successCount,
+           failedCount,
+           nfoMisCount);
+    if (!failedVec.empty()) {
+        printf("Failed videos:\n");
+        for (auto v : failedVec) {
+            printf("\t%s\n", v.c_str());
+        }
+    }
+    if (!nfoMisVec.empty()) {
+        printf("NfoMis videos:\n");
+        for (auto v : nfoMisVec) {
+            printf("\t%s\n", v.c_str());
+        }
+    }
+    LOG_DEBUG("Refresh tv nfos finished.");
 }

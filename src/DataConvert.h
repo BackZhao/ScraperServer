@@ -7,9 +7,9 @@
 
 // TODO: 接口设计上优化形参, 部分接口设置不够合理
 
-void VideoInfoToBriefJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::Object& outJson);
+void VideoInfoToBriefJson(const VideoInfo& videoInfo, Poco::JSON::Object& outJson);
 
-void VideoInfoToDetailedJson(uint32_t id, const VideoInfo& videoInfo, Poco::JSON::Object& outJson);
+void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Poco::JSON::Object& outJson);
 
 /**
  * @brief 
@@ -31,6 +31,7 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool
 bool ParseNfoToVideoInfo(VideoInfo& videoInfo);
 
 bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
+bool ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail, int seasonId);
 
 bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
 
@@ -41,7 +42,7 @@ bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
  * @return true 
  * @return false 
  */
-bool WriteEpisodeNfo(const Poco::JSON::Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths);
+bool WriteEpisodeNfo(const Poco::JSON::Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths, int seasonId);
 
 bool SetTVEnded(const std::string& nfoPath);
 

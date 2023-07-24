@@ -173,6 +173,56 @@ if(NOT TARGET spdlog::spdlog_header_only)
   endif ()
 endif()
 
+set(BUILD_SHARED_LIBS ON)
+
+# zlib
+find_package(zlib QUIET)
+if(NOT TARGET zlib)
+  FetchContent_Declare(
+    zlib
+    GIT_REPOSITORY "https://gitee.com/BackZhao97/zlib"
+    GIT_TAG master
+    EXCLUDE_FROM_ALL
+    )
+  FetchContent_GetProperties(zlib)
+  if(NOT zlib_POPULATED)
+    FetchContent_Populate(zlib)
+  endif ()
+endif()
+
+# ZenLib
+FetchContent_Declare(
+  zenlib
+  GIT_REPOSITORY "https://gitee.com/BackZhao97/ZenLib"
+  GIT_TAG master
+  EXCLUDE_FROM_ALL
+  )
+FetchContent_GetProperties(zenlib)
+if(NOT zenlib_POPULATED)
+  FetchContent_Populate(zenlib)
+endif ()
+
+set(BUILD_ZLIB ON)
+set(BUILD_ZENLIB ON)
+set(BUILD_SHARED_LIBS OFF)
+
+# mediainfo
+# find_package(mediainfo QUIET)
+# if(NOT TARGET mediainfo)
+  FetchContent_Declare(
+    mediainfo
+    GIT_REPOSITORY "https://gitee.com/BackZhao97/MediaInfoLib"
+    GIT_TAG cmake
+    EXCLUDE_FROM_ALL
+    )
+  FetchContent_GetProperties(mediainfo)
+  if(NOT mediainfo_POPULATED)
+    FetchContent_Populate(mediainfo)
+    add_subdirectory(${mediainfo_SOURCE_DIR}/Project/CMake ${mediainfo_BINARY_DIR})
+  endif ()
+# endif()
+
+
 add_library(Logger
   STATIC
   src/Logger.cpp
@@ -245,6 +295,8 @@ target_link_libraries(ScraperServer
     Poco::XML
   )
 
+target_include_directories(Demo SYSTEM PRIVATE ${mediainfo_SOURCE_DIR}/Source)
+target_include_directories(ScraperServer SYSTEM PRIVATE ${mediainfo_SOURCE_DIR}/Source)
 # if(CMAKE_VERSION VERSION_LESS 3.17)
 #   foreach(target Net JSON XML Foundation)
 #     get_property(target_header TARGET ${target} PROPERTY PUBLIC_HEADER SET)
