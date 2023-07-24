@@ -175,8 +175,8 @@ endif()
 
 set(BUILD_SHARED_LIBS ON)
 
-set(BUILD_ZLIB ON)
-set(BUILD_ZENLIB ON)
+set(BUILD_ZLIB ON CACHE BOOL "Build zlib shared library")
+set(BUILD_ZENLIB ON CACHE BOOL "Build ZenLib shared library")
 
 # mediainfo
 # find_package(mediainfo QUIET)
@@ -290,6 +290,7 @@ install(
     JSON
     XML
     Foundation
+    mediainfo
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
