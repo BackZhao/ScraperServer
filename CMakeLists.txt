@@ -175,36 +175,8 @@ endif()
 
 set(BUILD_SHARED_LIBS ON)
 
-# zlib
-find_package(zlib QUIET)
-if(NOT TARGET zlib)
-  FetchContent_Declare(
-    zlib
-    GIT_REPOSITORY "https://gitee.com/BackZhao97/zlib"
-    GIT_TAG master
-    EXCLUDE_FROM_ALL
-    )
-  FetchContent_GetProperties(zlib)
-  if(NOT zlib_POPULATED)
-    FetchContent_Populate(zlib)
-  endif ()
-endif()
-
-# ZenLib
-FetchContent_Declare(
-  zenlib
-  GIT_REPOSITORY "https://gitee.com/BackZhao97/ZenLib"
-  GIT_TAG master
-  EXCLUDE_FROM_ALL
-  )
-FetchContent_GetProperties(zenlib)
-if(NOT zenlib_POPULATED)
-  FetchContent_Populate(zenlib)
-endif ()
-
 set(BUILD_ZLIB ON)
 set(BUILD_ZENLIB ON)
-set(BUILD_SHARED_LIBS OFF)
 
 # mediainfo
 # find_package(mediainfo QUIET)
