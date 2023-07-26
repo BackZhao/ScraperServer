@@ -149,6 +149,8 @@ if(NOT TARGET Poco::Foundation)
     poco
     GIT_REPOSITORY "https://gitee.com/BackZhao97/poco.git"
     GIT_TAG poco-1.12.4-release
+    GIT_SHALLOW ON
+    GIT_PROGRESS ON
     )
   FetchContent_GetProperties(poco)
   if(NOT poco_POPULATED)
@@ -165,6 +167,8 @@ if(NOT TARGET spdlog::spdlog_header_only)
     GIT_REPOSITORY "https://gitee.com/BackZhao97/spdlog.git"
     GIT_TAG v1.x
     EXCLUDE_FROM_ALL
+    GIT_SHALLOW ON
+    GIT_PROGRESS ON
     )
   FetchContent_GetProperties(spdlog)
   if(NOT spdlog_POPULATED)
@@ -174,9 +178,9 @@ if(NOT TARGET spdlog::spdlog_header_only)
 endif()
 
 set(BUILD_SHARED_LIBS ON)
-
 set(BUILD_ZLIB ON CACHE BOOL "Build zlib shared library")
 set(BUILD_ZENLIB ON CACHE BOOL "Build ZenLib shared library")
+set(ENABLE_UNICODE OFF CACHE BOOL "Enable unicode support")
 
 # mediainfo
 # find_package(mediainfo QUIET)
@@ -186,6 +190,8 @@ set(BUILD_ZENLIB ON CACHE BOOL "Build ZenLib shared library")
     GIT_REPOSITORY "https://gitee.com/BackZhao97/MediaInfoLib"
     GIT_TAG cmake
     EXCLUDE_FROM_ALL
+    GIT_SHALLOW ON
+    GIT_PROGRESS ON
     )
   FetchContent_GetProperties(mediainfo)
   if(NOT mediainfo_POPULATED)
@@ -194,6 +200,15 @@ set(BUILD_ZENLIB ON CACHE BOOL "Build ZenLib shared library")
   endif ()
 # endif()
 
+set_target_properties(
+  Net
+  JSON
+  XML
+  Foundation
+  spdlog_header_only
+  mediainfo
+  PROPERTIES SYSTEM true
+)
 
 add_library(Logger
   STATIC
@@ -244,6 +259,7 @@ target_link_libraries(Demo
     Poco::Net
     Poco::JSON
     Poco::XML
+    mediainfo
   )
 
 add_executable(ScraperServer
@@ -265,6 +281,7 @@ target_link_libraries(ScraperServer
     Poco::Net
     Poco::JSON
     Poco::XML
+    mediainfo
   )
 
 target_include_directories(Demo SYSTEM PRIVATE ${mediainfo_SOURCE_DIR}/Source)
