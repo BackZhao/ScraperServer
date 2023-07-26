@@ -270,6 +270,9 @@ bool ScrapeMovie(VideoInfo& videoInfo, std::ostream& out)
         return false;
     }
 
+    videoInfo.posterStatus = POSTER_COMPELETED;
+    videoInfo.nfoStatus = NFO_FORMAT_MATCH;
+
     Object videoInfoJsonObj;
     VideoInfoToDetailedJson(videoInfo, videoInfoJsonObj);
 
