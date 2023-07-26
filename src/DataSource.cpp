@@ -76,7 +76,10 @@ bool DataSource::IsJpgCompleted(const std::string& posterName)
         ifs.close();
 
         if (firstTwoBytes != SOI || lastTwoBytes != EOI) {
-            LOG_ERROR("{} SOI({})/EOI({}) unmatched!", posterName, firstTwoBytes, lastTwoBytes);
+            LOG_ERROR("{} SOI({:0X})/EOI({:0X}) unmatched(JPEG SOI 0XD8FF, EOI 0xD9FF)!",
+                      posterName,
+                      firstTwoBytes,
+                      lastTwoBytes);
             return false;
         }
     } else {
