@@ -177,10 +177,14 @@ if(NOT TARGET spdlog::spdlog_header_only)
   endif ()
 endif()
 
-set(BUILD_SHARED_LIBS ON)
 set(BUILD_ZLIB ON CACHE BOOL "Build zlib shared library")
 set(BUILD_ZENLIB ON CACHE BOOL "Build ZenLib shared library")
 set(ENABLE_UNICODE OFF CACHE BOOL "Enable unicode support")
+
+set(SKIP_INSTALL_LIBRARIES ON CACHE BOOL "Skip install libs from zlib")
+set(SKIP_INSTALL_FILES ON CACHE BOOL "Skip install files from zlib")
+set(SKIP_INSTALL_HEADERS ON CACHE BOOL "Skip install headers from zlib")
+set(SKIP_INSTALL_ALL ON  CACHE BOOL "Skip install all from zlib")
 
 # mediainfo
 # find_package(mediainfo QUIET)
