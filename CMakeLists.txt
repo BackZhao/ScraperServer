@@ -8,13 +8,22 @@ project(
 
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/modules)
 
+option(XXX_GIT_SHALLOW "Enable git shallow" ON)
+option(XXX_GIT_PROGRESS "Show git progress" OFF)
+
+include(CheckGitRemoteRoot)
+check_git_remote_root(${CMAKE_CURRENT_SOURCE_DIR} git@gitee.com)
+message(STATUS "GIT_REMOTE_ROOT: ${GIT_REMOTE_ROOT}")
+
+include(AddVersionMacro)
+include(AddCompileFlags)
+
+include(FetchContentImport)
+
 set(CMAKE_CXX_STANDARD 11)
 if(MSVC)
     add_compile_options(/utf-8)
 endif()
-
-# fetch content
-include(FetchContent)
 
 # version
 include(AddVersionMacro)
@@ -79,20 +88,13 @@ if(NOT TARGET getopt)
 if(WIN32)
   find_package(getopt QUIET)
   if(NOT TARGET getopt)
-    FetchContent_Declare(
+    FetchContent_Import(
       getopt
-      GIT_REPOSITORY "https://gitee.com/BackZhao97/getopt.git"
-      GIT_SHALLOW ON
-      GIT_PROGRESS ON
+      GIT_REPOSITORY "${GIT_REMOTE_ROOT}/getopt.git"
+      GIT_SHALLOW  ${XXX_GIT_SHALLOW}
+      GIT_PROGRESS ${XXX_GIT_PROGRESS}
+      EXCLUDE_FROM_ALL
       )
-    FetchContent_GetProperties(getopt)
-    if(NOT getopt_POPULATED)
-      message(STATUS "Configuring getopt")
-      FetchContent_Populate(getopt)
-      add_subdirectory(
-        ${getopt_SOURCE_DIR} ${getopt_BINARY_DIR} EXCLUDE_FROM_ALL
-        )
-    endif()
   endif()
   if(NOT TARGET getopt)
     message(FATAL_ERROR "getopt is not found")
@@ -145,36 +147,27 @@ if(NOT TARGET Poco::Foundation)
     set(${prop} OFF)
   endforeach()
 
-  FetchContent_Declare(
+  FetchContent_Import(
     poco
-    GIT_REPOSITORY "https://gitee.com/BackZhao97/poco.git"
+    GIT_REPOSITORY "${GIT_REMOTE_ROOT}/poco.git"
     GIT_TAG poco-1.12.4-release
-    GIT_SHALLOW ON
-    GIT_PROGRESS ON
+    GIT_SHALLOW  ${XXX_GIT_SHALLOW}
+    GIT_PROGRESS ${XXX_GIT_PROGRESS}
+    EXCLUDE_FROM_ALL
     )
-  FetchContent_GetProperties(poco)
-  if(NOT poco_POPULATED)
-    FetchContent_Populate(poco)
-    add_subdirectory(${poco_SOURCE_DIR} ${poco_BINARY_DIR} EXCLUDE_FROM_ALL)
-  endif ()
 endif()
 
 # spdlog
 find_package(spdlog QUIET)
 if(NOT TARGET spdlog::spdlog_header_only)
-  FetchContent_Declare(
+  FetchContent_Import(
     spdlog
-    GIT_REPOSITORY "https://gitee.com/BackZhao97/spdlog.git"
+    GIT_REPOSITORY "${GIT_REMOTE_ROOT}/spdlog.git"
     GIT_TAG v1.x
-    EXCLUDE_FROM_ALL
-    GIT_SHALLOW ON
-    GIT_PROGRESS ON
+    GIT_SHALLOW  ${XXX_GIT_SHALLOW}
+    GIT_PROGRESS ${XXX_GIT_PROGRESS}
+    EXCLUDE_FROM_ALL 
     )
-  FetchContent_GetProperties(spdlog)
-  if(NOT spdlog_POPULATED)
-    FetchContent_Populate(spdlog)
-    add_subdirectory(${spdlog_SOURCE_DIR} ${spdlog_BINARY_DIR})
-  endif ()
 endif()
 
 set(BUILD_ZLIB ON CACHE BOOL "Build zlib shared library")
@@ -189,13 +182,13 @@ set(SKIP_INSTALL_ALL ON  CACHE BOOL "Skip install all from zlib")
 # mediainfo
 # find_package(mediainfo QUIET)
 # if(NOT TARGET mediainfo)
-  FetchContent_Declare(
+  FetchContent_Import(
     mediainfo
-    GIT_REPOSITORY "https://gitee.com/BackZhao97/MediaInfoLib"
+    GIT_REPOSITORY "${GIT_REMOTE_ROOT}/MediaInfoLib.git"
     GIT_TAG cmake
-    EXCLUDE_FROM_ALL
-    GIT_SHALLOW ON
-    GIT_PROGRESS ON
+    GIT_SHALLOW  ${XXX_GIT_SHALLOW}
+    GIT_PROGRESS ${XXX_GIT_PROGRESS}
+    EXCLUDE_FROM_ALL 
     )
   FetchContent_GetProperties(mediainfo)
   if(NOT mediainfo_POPULATED)
