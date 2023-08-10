@@ -1,7 +1,5 @@
 #pragma once
 
-#include "DataSource.h"
-
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -9,6 +7,8 @@
 
 #include <Poco/JSON/Object.h>
 #include <Poco/LocalDateTime.h>
+
+#include "DataSource.h"
 
 class ApiManager
 {

@@ -1,17 +1,5 @@
-#include <iostream>
-
-#include "DataSource.h"
-#include "Logger.h"
-#include "Config.h"
-#include "Option.h"
-#include "ApiManager.h"
-#include "HttpServer.h"
-
-#include "DataConvert.h"
-
-#include "Tmdb.h"
-
 #include <fstream>
+#include <iostream>
 
 #ifdef WIN32
 #include <windows.h>
@@ -19,7 +7,16 @@
 #include <unistd.h>
 #endif // WIN32
 
-#include "version.h"
+#include <version.h>
+
+#include "ApiManager.h"
+#include "Config.h"
+#include "DataConvert.h"
+#include "DataSource.h"
+#include "HttpServer.h"
+#include "Logger.h"
+#include "Option.h"
+#include "Tmdb.h"
 
 void shutdown()
 {

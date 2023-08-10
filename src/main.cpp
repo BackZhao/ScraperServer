@@ -1,19 +1,18 @@
-#include "ApiManager.h"
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif // WIN32
 
+#include <version.h>
+
+#include "ApiManager.h"
 #include "Config.h"
 #include "DataSource.h"
 #include "HttpServer.h"
 #include "Logger.h"
 #include "Option.h"
 #include "Tmdb.h"
-
-#include <version.h>
-
-#ifdef WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif // WIN32
 
 int main(int argc, char* argv[])
 {

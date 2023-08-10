@@ -1,12 +1,12 @@
 #include "ApiManager.h"
 
-#include "DataConvert.h"
-#include "Tmdb.h"
-#include "Logger.h"
-
 #include <fstream>
 
 #include <Poco/DateTimeFormatter.h>
+
+#include "DataConvert.h"
+#include "Logger.h"
+#include "Tmdb.h"
 
 void ApiManager::SetScanPaths(std::map<VideoType, std::vector<std::string>> paths)
 {

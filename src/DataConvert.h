@@ -1,9 +1,8 @@
 #pragma once
 
-#include "CommonType.h"
-
 #include <Poco/JSON/Object.h>
 
+#include "CommonType.h"
 
 // TODO: 接口设计上优化形参, 部分接口设置不够合理
 

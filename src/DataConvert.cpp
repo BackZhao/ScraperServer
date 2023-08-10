@@ -1,9 +1,5 @@
 #include "DataConvert.h"
 
-#include "Config.h"
-#include "Logger.h"
-#include "iso-3611-1.h"
-
 #include <fstream>
 
 #include <Poco/AutoPtr.h>
@@ -16,6 +12,10 @@
 #include <Poco/Path.h>
 #include <Poco/StreamCopier.h>
 #include <Poco/XML/XMLWriter.h>
+
+#include "Config.h"
+#include "Logger.h"
+#include "iso-3611-1.h"
 
 using Poco::AutoPtr;
 using namespace Poco::XML;

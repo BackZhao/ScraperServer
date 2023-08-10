@@ -1,8 +1,8 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 const std::vector<std::string> VIDEO_SUFFIX = {"mkv", "mp4", "iso", "ts"}; // 视频文件的后缀名集合
 

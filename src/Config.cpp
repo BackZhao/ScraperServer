@@ -1,7 +1,5 @@
 #include "Config.h"
 
-#include "Logger.h"
-
 #include <fstream>
 
 #include <Poco/File.h>
@@ -10,6 +8,8 @@
 #include <Poco/JSON/Parser.h>
 #include <Poco/Path.h>
 #include <Poco/StreamCopier.h>
+
+#include "Logger.h"
 
 const std::string CONF_FILE_NAME           = "ScraperServer.json"; // 默认的配置文件名称
 const int         DEFAULT_HTTP_SERVER_PORT = 54250;                // 默认的HTTP服务器监听端口

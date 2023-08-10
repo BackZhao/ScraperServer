@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CommonType.h"
-
 #include <iostream>
+
+#include "CommonType.h"
 
 bool Search(std::ostream& out, VideoType VideoType, const std::string& keywords, const std::string& year = "");
 

@@ -1,9 +1,5 @@
 #pragma once
 
-#include "Config.h"
-
-#include "ApiManager.h"
-
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -11,6 +7,8 @@
 #include <Poco/Net/HTTPServer.h>
 #include <Poco/Net/HTTPServerParams.h>
 
+#include "ApiManager.h"
+#include "Config.h"
 
 /**
  * @brief

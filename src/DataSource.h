@@ -1,11 +1,11 @@
 #pragma once
 
-#include "CommonType.h"
-
 #include <map>
 #include <mutex>
 #include <string>
 #include <vector>
+
+#include "CommonType.h"
 
 class DataSource
 {

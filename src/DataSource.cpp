@@ -7,15 +7,14 @@
 #include <set>
 #include <string>
 
+#include <MediaInfoDLL/MediaInfoDLL.h>
+#include <Poco/AutoPtr.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
-#include <Poco/AutoPtr.h>
 #include <Poco/SortedDirectoryIterator.h>
 
 #include "DataConvert.h"
 #include "Logger.h"
-
-#include <MediaInfoDLL/MediaInfoDLL.h>
 
 using namespace Poco::XML;
 using Poco::AutoPtr;

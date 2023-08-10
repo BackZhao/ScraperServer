@@ -1,13 +1,13 @@
 #include "HttpServer.h"
 
-#include "Config.h"
-#include "HttpRequestHandler.h"
-#include "Logger.h"
-#include "ApiManager.h"
+#include <functional>
 
 #include <signal.h>
 
-#include <functional>
+#include "ApiManager.h"
+#include "Config.h"
+#include "HttpRequestHandler.h"
+#include "Logger.h"
 
 std::atomic<int> HTTPServerApp::m_signum(-1);
 

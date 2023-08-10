@@ -1,9 +1,5 @@
 #include "Tmdb.h"
 
-#include "Config.h"
-#include "Logger.h"
-#include "DataConvert.h"
-
 #include <fstream>
 
 #include "Poco/Net/HTTPClientSession.h"
@@ -13,6 +9,10 @@
 #include <Poco/URI.h>
 #include <Poco/JSON/Parser.h>
 #include <Poco/StreamCopier.h>
+
+#include "Config.h"
+#include "DataConvert.h"
+#include "Logger.h"
 
 using namespace Poco::JSON;
 
