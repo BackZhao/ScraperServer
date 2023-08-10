@@ -1,5 +1,5 @@
 /**
- * @file iso-3611-1.h
+ * @file ISO-3611-1.h
  * @author your name (you@domain.com)
  * @brief ISO-3611-1两字母代码映射表
  * @version 0.1

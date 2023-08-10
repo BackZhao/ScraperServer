@@ -15,7 +15,7 @@
 
 #include "Config.h"
 #include "Logger.h"
-#include "iso-3611-1.h"
+#include "ISO-3611-1.h"
 
 using Poco::AutoPtr;
 using namespace Poco::XML;
