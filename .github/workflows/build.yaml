@@ -14,17 +14,29 @@ jobs:
     steps:
       - name: Checkout codes
         uses: actions/checkout@v3
+
       - name: Install dependencies
         uses: seanmiddleditch/gha-setup-ninja@master
+
       - name: Init vsDev for Windows
         if: runner.os == 'Windows'
         uses: seanmiddleditch/gha-setup-vsdevenv@master
+
+      - name: Cache CMake build directory
+        uses: actions/cache@v2
+        with:
+          path: build
+          key: cmake-build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+
       - name: CMake configure
         run: cmake -B build/native -G Ninja
+
       - name: CMake build
         run: cmake --build build/native --verbose
+
       - name: CMake package
         run: cmake --build build/native --target package
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
