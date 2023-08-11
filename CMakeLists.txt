@@ -13,7 +13,6 @@ option(XXX_GIT_PROGRESS "Show git progress" OFF)
 
 include(CheckGitRemoteRoot)
 check_git_remote_root(${CMAKE_CURRENT_SOURCE_DIR} git@gitee.com)
-message(STATUS "GIT_REMOTE_ROOT: ${GIT_REMOTE_ROOT}")
 
 include(AddVersionMacro)
 include(AddCompileFlags)
