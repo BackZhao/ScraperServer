@@ -27,6 +27,8 @@ jobs:
         with:
           path: build
           key: cmake-build-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            cmake-build-${{ runner.os }}-
 
       - name: CMake configure
         run: cmake -B build/native -G Ninja
