@@ -3,7 +3,7 @@
     "LogLevel": "info",
     "AutoInterval": 300,
     "API": {
-        "APIKey": "dd1e95388b7b0650d53f3cf91b44c743",
+        "APIKey": "TMDB-API-KEY",
         "URLs": {
             "SearchMovie": "http://api.themoviedb.org/3/search/movie",
             "SearchTV": "http://api.themoviedb.org/3/search/tv",
