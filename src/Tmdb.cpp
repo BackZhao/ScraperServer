@@ -303,7 +303,7 @@ bool ScrapeTV(VideoInfo& videoInfo, std::ostream& out, int seasonId)
         return false;
     }
 
-    if (!GetSeasonDetail(sS, videoInfo.videoDetail.uniqueid, videoInfo.videoDetail.seasonNumber)) {
+    if (!GetSeasonDetail(sS, videoInfo.videoDetail.uniqueid, seasonId)) {
         LOG_ERROR("Get season detail failed for {}", videoInfo.videoPath);
         out << R"({"success": false, "msg": "Get season detail failed!"})";
         return false;
