@@ -19,6 +19,8 @@ public:
 
     static void CheckVideoStatus(VideoInfo& videoInfo);
 
+    static bool IsMetaCompleted(const VideoInfo& videoInfo);
+
 private:
 
     static bool IsVideo(const std::string& suffix);

@@ -142,7 +142,7 @@ struct VideoDetail {
 
     // 电视剧专属
     int                      seasonNumber;    // 季编号
-    int                      episodeNfoCount; // 电视剧剧集完整的NFO文件个数
+    size_t                   episodeNfoCount; // 电视剧剧集完整的NFO文件个数
     std::vector<std::string> episodePaths;    // 电视剧剧集路径
     bool                     isEnded;         // 是否已完结
 

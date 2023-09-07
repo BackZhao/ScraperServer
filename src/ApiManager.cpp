@@ -144,15 +144,14 @@ void ApiManager::List(const Poco::JSON::Object &param, std::ostream &out)
             Poco::JSON::Object jsonObj;
             switch (videoStatus) {
                 case INCOMPLETE: {
-                    if (videoInfo.nfoStatus == NFO_FORMAT_MATCH && videoInfo.posterStatus == POSTER_COMPELETED) {
+                    if (DataSource::IsMetaCompleted(videoInfo)) {
                         continue;
                     }
                     break;
                 }
                 case COMPLETE: {
-                    if (videoInfo.nfoStatus != NFO_FORMAT_MATCH || videoInfo.posterStatus != POSTER_COMPELETED) {
+                    if (!DataSource::IsMetaCompleted(videoInfo)) {
                         continue;
-                        ;
                     }
                     break;
                 }

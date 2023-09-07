@@ -219,6 +219,21 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
     }
 }
 
+bool DataSource::IsMetaCompleted(const VideoInfo& videoInfo)
+{
+    // NFO文件和海报任意一个不完整, 即视为不完整
+    if (videoInfo.nfoStatus != NFO_FORMAT_MATCH || videoInfo.posterStatus != POSTER_COMPELETED) {
+        return false;
+    }
+
+    // 电视剧还需要剧集的NFO完整
+    if (videoInfo.videoType == TV && videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
+        return false;
+    }
+
+    return true;
+}
+
 std::string DataSource::GetLargestFile(const std::string& path)
 {
     // 遍历文件
