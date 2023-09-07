@@ -15,6 +15,20 @@
 #include "ApiManager.h"
 #include "Config.h"
 #include "Logger.h"
+#include "ResourceManager.h"
+
+const std::string WEBUI_BUILD_DIST = "web"; // WEBUI默认生成的路径
+
+void FillWithResponseJson(std::ostream& out, bool isSuccess, const std::string& msg)
+{
+    Poco::JSON::Object jsonObj;
+    jsonObj.set("success", isSuccess);
+    if (!msg.empty()) {
+        jsonObj.set("msg", msg);
+    }
+
+    jsonObj.stringify(out);
+}
 
 void InvalidRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
 {
@@ -73,16 +87,18 @@ void ApiRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResp
 
 void IndexRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
 {
-    LOG_TRACE("Index request from {}", request.clientAddress().toString());
+    LOG_DEBUG("Index request from {}", request.clientAddress().toString());
 
     response.setChunkedTransferEncoding(true);
-    std::string indexFile = "/index.html";
-    if (!Poco::File(indexFile).exists()) {
-        std::ostream& ostr = response.send();
-        ostr << "Invalid resource request!";
-        return;
+    std::string indexFile = WEBUI_BUILD_DIST + "/index.html";
+    response.setContentType("text/html");
+    size_t      fileSize = 0;
+    const char* data     = ResourceManager::Instance().GetData(indexFile, fileSize);
+    if (data != nullptr) {
+        response.sendBuffer(data, fileSize);
+    } else {
+        FillWithResponseJson(response.send(), false, "Invalid resource request!");
     }
-    response.sendFile(indexFile, "text/html");
 }
 
 std::string ResRequestHandler::MimeType(const std::string& fileName)
@@ -126,49 +142,58 @@ std::string ResRequestHandler::MimeType(const std::string& fileName)
 
 void ResRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
 {
-    LOG_TRACE("Static res request from {}", request.clientAddress().toString());
+    LOG_DEBUG("Static res request from {}", request.clientAddress().toString());
 
-    std::string fileName = request.getURI();
-    if (!Poco::File(fileName).exists()) {
-        std::ostream& ostr = response.send();
-        ostr << "Invalid resource request!";
-        return;
+    std::string fileName = WEBUI_BUILD_DIST + request.getURI();
+    response.setContentType(MimeType(fileName));
+    size_t      fileSize = 0;
+    const char* data     = ResourceManager::Instance().GetData(fileName, fileSize);
+    if (data != nullptr) {
+        response.sendBuffer(data, fileSize);
+    } else {
+        FillWithResponseJson(response.send(), false, "Invalid resource request!");
     }
-    response.sendFile(fileName, MimeType(fileName));
 }
 
-void AuthHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
+void AuthHandler::handleRequest(HTTPServerRequest&, HTTPServerResponse& response)
 {
-    response.requireAuthentication("Supervisor");
+    response.setStatusAndReason(HTTPServerResponse::HTTP_UNAUTHORIZED, "Unauthorized");
+    response.set("WWW-Authenticate", "Digest realm=\"realm\", qop=\"auth\", nonce=\"abcdef1234567890\"");
     response.send();
 }
 
-HTTPRequestHandler* SupervisorRequestHandlerFactory::CheckAuth(const HTTPServerRequest& request)
+HTTPRequestHandler* AppRequestHandlerFactory::CheckAuth(const HTTPServerRequest& request)
 {
-    // 首次访问, 提示进行Basic鉴权
+    // 首次访问, 提示进行鉴权
     if (request.find("Authorization") == request.end()) {
         return new AuthHandler;
     }
 
     // 校验用户名密码(admin:kaida)
-    if (request.get("Authorization") != "Basic YWRtaW46a2FpZGE=") {
+    Poco::Net::HTTPDigestCredentials credentials("admin", "kaida");
+    if (credentials.verifyAuthInfo(request)) {
+        LOG_TRACE("Authorized success from client {}", request.clientAddress().toString());
+        return nullptr;
+    } else {
+        LOG_ERROR("Authorized failed from client {}", request.clientAddress().toString());
         return new AuthHandler;
     }
-
-    return nullptr;
 }
 
-HTTPRequestHandler* SupervisorRequestHandlerFactory::createRequestHandler(const HTTPServerRequest& request)
+HTTPRequestHandler* AppRequestHandlerFactory::createRequestHandler(const HTTPServerRequest& request)
 {
     const std::string& uri = request.getURI();
+    LOG_TRACE("Http request, URI: {}, ADDR: {}", uri, request.clientAddress().toString());
+    auto checkResult = CheckAuth(request);
+    if (checkResult != nullptr) {
+        return checkResult;
+    }
+
     if (uri.find("/api/") == 0) {
         return new ApiRequestHandler();
+    } else if (uri == "/") {
+        return new IndexRequestHandler();
     } else {
-        auto checkResult = CheckAuth(request);
-        if (uri == "/") {
-            return checkResult == nullptr ? new IndexRequestHandler() : checkResult;
-        } else {
-            return checkResult == nullptr ? new ResRequestHandler() : checkResult;
-        }
+        return new ResRequestHandler();
     }
 }

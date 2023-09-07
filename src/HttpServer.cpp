@@ -44,7 +44,7 @@ int HTTPServerApp::run()
     Poco::Net::HTTPServerParams* pParams = new Poco::Net::HTTPServerParams;
     pParams->setMaxQueued(100);
     pParams->setMaxThreads(16);
-    m_httpServer = new Poco::Net::HTTPServer(new SupervisorRequestHandlerFactory(), sock, pParams);
+    m_httpServer = new Poco::Net::HTTPServer(new AppRequestHandlerFactory(), sock, pParams);
     LOG_INFO("Listening on port: {}", m_httpServer->port());
     m_httpServer->start();
 
@@ -74,7 +74,7 @@ int HTTPServerApp::run()
     }
 
     // 停止HTTP服务器
-    m_httpServer->stop();
+    m_httpServer->stopAll(true);
 
     return 0;
 }

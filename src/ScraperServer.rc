@@ -1,0 +1,32 @@
+#include    "winres.h"
+
+IDR_RES_ZIP     RCDATA  "res.zip"
+
+VS_VERSION_INFO VERSIONINFO
+
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "CompanyName", "BackZhao's Production"
+            VALUE "FileDescription", "ScraperServer"
+            VALUE "FileVersion", "1.0"
+            VALUE "InternalName", "ScraperServer"
+            VALUE "LegalCopyright", "Copyright(c) backzhao@qq.cn 2023. All rights reserved."
+            VALUE "OriginalFilename", "ScraperServer.exe"
+            VALUE "ProductName", "ScraperServer"
+            VALUE "ProductVersion", "1.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END

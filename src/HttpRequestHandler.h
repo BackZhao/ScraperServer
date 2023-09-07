@@ -108,15 +108,15 @@ public:
  * @brief 生成HTTP请求处理类的工厂类
  *
  */
-class SupervisorRequestHandlerFactory : public HTTPRequestHandlerFactory
+class AppRequestHandlerFactory : public HTTPRequestHandlerFactory
 {
 public:
 
     /**
-     * @brief Construct a new Supervisor Request Handler Factory object
+     * @brief Construct a new  Request Handler Factory object
      *
      */
-    SupervisorRequestHandlerFactory() {}
+    AppRequestHandlerFactory() {}
 
     /**
      * @brief Create a Request Handler object

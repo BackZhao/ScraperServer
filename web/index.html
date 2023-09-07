@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="./vue.global.js"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input {
+            width: 60px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <template v-for="type in videoType">
+            <input type="radio" v-model="currentType" :value="type">{{ type }}<br>
+        </template>
+        <button @click="ScanMovie" :disabled="scanDetail.get(currentType).status === 'scanning'">扫描</button>
+        <button @click="GetUncompletedMovies"
+            :disabled="scanDetail.get(currentType).status !== 'finished'">获取列表</button>
+        <div>扫描开始时间: {{ scanDetail.get(currentType).scanBeginTime }}</div><br>
+        <div>扫描结束时间: {{ scanDetail.get(currentType).scanEndTime }}</div><br>
+        <div>视频总数: {{ scanDetail.get(currentType).totalVideos }}</div><br>
+
+        <!-- <template v-if="unCompletedVideosLists.length !== 0"> -->
+        <!-- <template> -->
+        <div>不完整视频总数: {{ unCompletedVideosLists.length }}</div><br>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>路径</th>
+                <th>NFO状态</th>
+                <th>海报状态</th>
+                <th>HDR类型</th>
+                <th>刮削</th>
+            </tr>
+            <template v-for="video in unCompletedVideosLists" :key="video.id"
+                v-show="scrapeStatus[video.id] !== 'success'">
+                <tr>
+                    <td>{{ video.id }}</td>
+                    <td>{{ video.VideoPath }}</td>
+                    <td>{{ this.status2Str[video.NfoStatus] }}</td>
+                    <td>{{ this.status2Str[video.PosterStatus] }}</td>
+                    <td>{{ video.HDRType }}</td>
+                    <td>
+                        <template v-if="scrapeStatus[video.id] !== 'sucesss'">
+                            <input type="text" v-model="scrapeTmdbId[video.id]" placeholder="tmdbId">
+                            <input type="text" v-model="scrapeSeasonId[video.id]" placeholder="seasonId"
+                                v-if="currentType === 'tv'">
+                            <button
+                                @click="currentType === 'movie' ? ScrapeMovie(video.id) : ScrapeTv(video.id)">刮削</button>
+                        </template>
+                        <template v-else>
+                            <div>{{ scrapeStatus[video.id] }}</div>
+                        </template>
+                    </td>
+                </tr>
+            </template>
+        </table>
+        <!-- </template> -->
+    </div>
+
+    <script>
+        let app = Vue.createApp({
+            data() {
+                return {
+                    videoType: ['movie', 'tv'],
+                    currentType: 'movie',
+                    scanDetail: new Map(
+                        [
+                            ['movie', {
+                                status: 'not scanned',
+                                scanBeginTime: '',
+                                scanEndTime: '',
+                                totalVideos: 0,
+                            }],
+                            ['tv', {
+                                status: 'not scanned',
+                                scanBeginTime: '',
+                                scanEndTime: '',
+                                totalVideos: 0,
+                            }],
+                        ]
+                    ),
+                    unCompletedVideosLists: [],
+                    scrapeStatus: new Map(),
+                    scrapeTmdbId: new Map(),
+                    scrapeSeasonId: new Map(),
+                    status2Str: ['完好', '损坏', '不存在'],
+                    apiAddr: window.location.protocol + '//' + window.location.host,
+                    // apiAddr: 'http://xanas.backzhao.cn:54250',
+                    requestOptions: {
+                        method: 'GET',
+                        credentials: 'include', // 这将包括凭据在请求中
+                    },
+                }
+            },
+
+            created() {
+                this.CheckScanStatus();
+
+                setInterval(() => {
+                    if (this.scanDetail.get(this.currentType).status === 'scanning') {
+                        this.CheckScanStatus();
+                    }
+                }, 1000);
+            },
+
+            methods: {
+                ScanMovie() {
+                    fetch(this.apiAddr + "/api/scan?videoType=" + this.currentType + "", this.requestOptions)
+                        .then((res) => res.json())
+                        .then((res) => {
+                            this.scanDetail.get(this.currentType).status = res.success ? 'scanning' : 'failed';
+                        });
+                },
+
+                CheckScanStatus() {
+                    fetch(this.apiAddr + "/api/scanResult", this.requestOptions)
+                        .then((res) => res.json())
+                        .then((res) => {
+                            for (result of res) {
+                                switch (result.ScanStatus) {
+                                    case 0:
+                                        console.log("远程服务器尚未进行扫描.");
+                                        break;
+                                    case 1:
+                                        console.log("远程服务器正在扫描......");
+                                        this.scanDetail.get(this.currentType).status = 'scanning';
+                                        break;
+                                    case 2:
+                                        console.log("远程服务器扫描完成.");
+                                        this.scanDetail.get(this.currentType).totalVideos = result.TotalVideos;
+                                        this.scanDetail.get(this.currentType).status = 'finished';
+                                        this.scanDetail.get(this.currentType).scanBeginTime = result.ScanBeginTime;
+                                        this.scanDetail.get(this.currentType).scanEndTime = result.ScanEndTime;
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        });
+                },
+
+                GetUncompletedMovies() {
+                    fetch(this.apiAddr + "/api/list?videoType=" + this.currentType + "&status=incomplete", this.requestOptions)
+                        .then((res) => res.json())
+                        .then((res) => {
+                            if (res.success) {
+                                this.unCompletedVideosLists = res.list;
+                                console.log("不完整的电影总数: " + this.unCompletedVideosLists.length);
+                            } else {
+                                console.log("获取不完整电影列表失败");
+                            }
+                        });
+                },
+
+                ScrapeMovie(id) {
+                    fetch(this.apiAddr + "/api/scrape?id=" + id + "&tmdbid=" + this.scrapeTmdbId[id] + "&videoType=" + this.currentType, this.requestOptions)
+                        .then((res) => res.json())
+                        .then((res) => {
+                            if (res.success) {
+                                this.scrapeStatus[id] = 'success';
+                                console.log("刮削电影成功: " + res.videoInfo.VideoDetail.Title);
+                                console.log(res);
+                            } else {
+                                this.scrapeStatus[id] = 'failed';
+                                console.log("刮削电影失败:");
+                                console.log(res);
+                            }
+                        });
+                },
+
+                ScrapeTv(id) {
+                    fetch(this.apiAddr + "/api/scrape?id=" + id + "&tmdbid=" + this.scrapeTmdbId[id] + "&videoType=" + this.currentType + "&seasonId=" + this.scrapeSeasonId[id], this.requestOptions)
+                        .then((res) => res.json())
+                        .then((res) => {
+                            if (res.success) {
+                                this.scrapeStatus[id] = 'success';
+                                console.log("刮削电视剧成功: " + res.videoInfo.VideoDetail.Title);
+                                console.log(res);
+                            } else {
+                                this.scrapeStatus[id] = 'failed';
+                                console.log("刮削电视剧失败:");
+                                console.log(res);
+                            }
+                        });
+                }
+            }
+        });
+
+        let vm = app.mount('#app');
+    </script>
+
+</body>
+
+</html>

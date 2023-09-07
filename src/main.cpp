@@ -12,6 +12,7 @@
 #include "HttpServer.h"
 #include "Logger.h"
 #include "Option.h"
+#include "ResourceManager.h"
 #include "Tmdb.h"
 
 int main(int argc, char* argv[])
@@ -26,6 +27,11 @@ int main(int argc, char* argv[])
     // 初始化日志记录器
     if (!Logger::Instance().Init(static_cast<spdlog::level::level_enum>(Config::Instance().GetLogLevel()),
                                  Config::Instance().GetLogFile())) {
+        return 1;
+    }
+
+    if (!ResourceManager::Instance().Init()) {
+        LOG_ERROR("Resource init failed!");
         return 1;
     }
 

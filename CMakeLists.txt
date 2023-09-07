@@ -109,12 +109,21 @@ if(NOT TARGET Poco::Foundation)
   set(DISABLE_CPP14 ON)
   foreach(
     prop
+    ENABLE_JSON
+    ENABLE_ZIP
+    ENABLE_XML
+    )
+    set(${prop} ON)
+  endforeach()
+
+  foreach(
+    prop
     ## apache
     ENABLE_APACHECONNECTOR
     ## encoding
     ENABLE_ENCODINGS
     ## zip
-    ENABLE_ZIP
+    # ENABLE_ZIP
     ## format
     # ENABLE_XML
     # ENABLE_JSON
@@ -137,12 +146,6 @@ if(NOT TARGET Poco::Foundation)
     ENABLE_ACTIVERECORD
     ENABLE_ACTIVERECORD_COMPILER
     )
-    if(NOT DEFINED CACHE[${prop}])
-      set(${prop}
-        OFF
-        CACHE BOOL ""
-        )
-    endif()
     set(${prop} OFF)
   endforeach()
 
@@ -244,6 +247,7 @@ add_executable(Demo
   src/DataConvert.cpp
   src/DataSource.cpp
   src/Tmdb.cpp
+  src/ResourceManager.cpp
   )
 target_link_libraries(Demo
   PRIVATE
@@ -255,6 +259,7 @@ target_link_libraries(Demo
     Poco::Net
     Poco::JSON
     Poco::XML
+    Poco::Zip
     mediainfo
   )
 
@@ -265,6 +270,7 @@ add_executable(ScraperServer
   src/ApiManager.cpp
   src/DataConvert.cpp
   src/DataSource.cpp
+  src/ResourceManager.cpp
   src/Tmdb.cpp
   )
 target_link_libraries(ScraperServer
@@ -277,6 +283,7 @@ target_link_libraries(ScraperServer
     Poco::Net
     Poco::JSON
     Poco::XML
+    Poco::Zip
     mediainfo
   )
 
@@ -293,6 +300,65 @@ target_include_directories(ScraperServer SYSTEM PRIVATE ${mediainfo_SOURCE_DIR}/
 #   unset(target_header)
 # endif()
 
+set(RES_DIR "${CMAKE_CURRENT_LIST_DIR}/web")
+set(RES_ZIP "${CMAKE_CURRENT_BINARY_DIR}/res.zip")
+
+file(GLOB_RECURSE RES_DEP
+    LIST_DIRECTORIES false
+    "${RES_DIR}/*")
+add_custom_command(
+    OUTPUT ${RES_ZIP}
+    COMMAND ${CMAKE_COMMAND} -E tar "cfv" ${RES_ZIP} --format=zip ${RES_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+    DEPENDS ${RES_DEP}
+    VERBATIM
+    )
+target_sources(ScraperServer
+  PRIVATE
+    ${RES_ZIP}
+  )
+
+if (WIN32)
+  target_sources(ScraperServer
+  PRIVATE
+    src/ScraperServer.rc
+  )
+else()
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+      enable_language(ASM)
+
+      if(CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+          set(_ _)
+      endif()
+
+      set(RES_ASM ${CMAKE_CURRENT_BINARY_DIR}/res.s)
+      if(NOT EXISTS ${RES_ASM})
+        file(WRITE ${RES_ASM} "\
+    .data
+    .global ${_}_binary_res_zip_start
+    .global ${_}_binary_res_zip_end
+${_}_binary_res_zip_start:
+    .incbin \"res.zip\"
+${_}_binary_res_zip_end:
+${_}_binary_res_zip_size = ${_}_binary_res_zip_end - ${_}_binary_res_zip_start
+")
+      endif()
+      target_sources(ScraperServer PRIVATE ${RES_ASM})
+      target_sources(Demo PRIVATE ${RES_ASM})
+  else()
+    set(RES_O ${CMAKE_CURRENT_BINARY_DIR}/res.o)
+    add_custom_command(
+      OUTPUT ${RES_O}
+      COMMAND "${CMAKE_LINKER}" -r -b binary -o res.o res.zip
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      DEPENDS ${RES_ZIP}
+      VERBATIM
+      )
+    target_sources(ScraperServer PRIVATE ${RES_O})
+    target_sources(Demo PRIVATE ${RES_O})
+  endif()
+endif()
+
 # install
 include(GNUInstallDirs)
 install(
@@ -302,6 +368,7 @@ install(
     Net
     JSON
     XML
+    Zip
     Foundation
     mediainfo
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

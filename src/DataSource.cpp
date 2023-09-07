@@ -100,6 +100,7 @@ void GetHdrFormat(VideoInfo& videoInfo)
         case MOVIE: {
             if (mi.Open(videoInfo.videoPath) <= 0) {
                 LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+                videoInfo.hdrType = NON_HDR;
                 return;
             }
             break;
@@ -109,6 +110,7 @@ void GetHdrFormat(VideoInfo& videoInfo)
                 // 以第一集的HDR类型填写
                 if (mi.Open(videoInfo.videoDetail.episodePaths.at(0)) <= 0) {
                     LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+                    videoInfo.hdrType = NON_HDR;
                     return;
                 }
             } else {
