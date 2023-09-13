@@ -111,7 +111,10 @@ void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Object& outJson)
     outJson.set("VideoDetail", videoDetailJson);
 }
 
-bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool setHDRTitle)
+bool VideoInfoToNfo(const VideoInfo&   videoInfo,
+                    const std::string& nfoPath,
+                    bool               setHDRTitle,
+                    const std::string& defaultIdType)
 {
     std::ofstream ofs(nfoPath);
     if (!ofs.is_open()) {
@@ -171,12 +174,16 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool
 
     createAndAppendText(rootEle, "plot", videoInfo.videoDetail.plot);
 
-    AutoPtr<Element> uniqueidEle = dom->createElement("uniqueid");
-    uniqueidEle->setAttribute("type", "tmdb");
-    uniqueidEle->setAttribute("default", "true");
-    AutoPtr<Text> uniqueidText = dom->createTextNode(std::to_string(videoInfo.videoDetail.uniqueid));
-    uniqueidEle->appendChild(uniqueidText);
-    rootEle->appendChild(uniqueidEle);
+    for (auto pair : videoInfo.videoDetail.uniqueid) {
+        AutoPtr<Element> uniqueidEle = dom->createElement("uniqueid");
+        uniqueidEle->setAttribute("type", pair.first);
+        if (pair.first == defaultIdType) {
+            uniqueidEle->setAttribute("default", "true");
+        }
+        AutoPtr<Text> uniqueidText = dom->createTextNode(std::to_string(pair.second));
+        uniqueidEle->appendChild(uniqueidText);
+        rootEle->appendChild(uniqueidEle);
+    }
 
     for (const auto& genre : videoInfo.videoDetail.genre) {
         createAndAppendText(rootEle, "genre", genre);
@@ -273,7 +280,13 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     videoInfo.videoDetail.ratings.rating = GetNodeValByPath<double>(rootElement, "/ratings/rating/value");
     videoInfo.videoDetail.ratings.votes  = GetNodeValByPath<int>(rootElement, "/ratings/rating/votes");
     videoInfo.videoDetail.plot           = GetNodeValByPath<std::string>(rootElement, "/plot");
-    videoInfo.videoDetail.uniqueid       = GetNodeValByPath<int>(rootElement, "/uniqueid");
+
+    AutoPtr<NodeList> IdNodes = rootElement->getElementsByTagName("uniqueid");
+    for (uint32_t i = 0; i < IdNodes->length(); i++) {
+        Element* ele = dynamic_cast<Element *>(IdNodes->item(i));
+        std::string idType        = ele->getAttribute("type");
+        videoInfo.videoDetail.uniqueid[idType] = std::stoi(ele->innerText());
+    }
 
     AutoPtr<NodeList> genreNodes = rootElement->getElementsByTagName("genre");
     for (uint32_t i = 0; i < genreNodes->length(); i++) {
@@ -325,7 +338,6 @@ bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDet
     videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
     videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
     videoDetail.plot           = jsonPtr->getValue<std::string>("overview");
-    videoDetail.uniqueid       = jsonPtr->getValue<int>("id");
 
     if (!jsonPtr->getValue<std::string>("poster_path").empty()) {
         const std::string imageUrl =
@@ -412,7 +424,6 @@ bool ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail
     videoDetail.originaltitle  = jsonPtr->getValue<std::string>("original_name");
     videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
     videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
-    videoDetail.uniqueid       = jsonPtr->getValue<int>("id");
 
     auto genreJsonPtr = jsonPtr->getArray("genres");
     for (std::size_t i = 0; i < genreJsonPtr->size(); i++) {

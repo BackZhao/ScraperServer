@@ -18,7 +18,7 @@ void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Poco::JSON::Object& out
  * @return true 
  * @return false 
  */
-bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool setHDRTitle);
+bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool setHDRTitle, const std::string& defaultIdType);
 
 /**
  * @brief 解析NFO文件

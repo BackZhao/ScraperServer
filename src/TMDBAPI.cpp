@@ -1,4 +1,4 @@
-#include "Tmdb.h"
+#include "TMDBAPI.h"
 
 #include <fstream>
 
@@ -26,7 +26,7 @@ static std::size_t ReplaceString(std::string& inout, const std::string& what, co
     return count;
 }
 
-bool SendRequest(std::ostream& out, Poco::URI& uri)
+bool TMDBAPI::SendRequest(std::ostream& out, Poco::URI& uri)
 {
     Poco::Net::HTTPRequest       request;
     Poco::Net::HTTPResponse      response;
@@ -64,25 +64,25 @@ bool SendRequest(std::ostream& out, Poco::URI& uri)
     return true;
 }
 
-bool Search(std::ostream& out, VideoType VideoType, const std::string& keywords, const std::string& year)
-{
-    // 拼接访问的URL
-    ApiUrlType apiUrlType = VideoType == TV ? SEARCH_TV : SEARCH_MOVIE;
-    std::string uriStr        = Config::Instance().GetApiUrl(apiUrlType);
+// bool TMDBAPI::Search(std::ostream& out, VideoType VideoType, const std::string& keywords, const std::string& year)
+// {
+//     // 拼接访问的URL
+//     ApiUrlType apiUrlType = VideoType == TV ? SEARCH_TV : SEARCH_MOVIE;
+//     std::string uriStr        = Config::Instance().GetApiUrl(apiUrlType);
 
-    Poco::URI uri(uriStr);
-    uri.addQueryParameter("api_key", Config::Instance().GetApiKey());
-    uri.addQueryParameter("language", "zh-cn");
-    uri.addQueryParameter("query", keywords);
-    if (!year.empty()) {
-        uri.addQueryParameter("year", year);
-    }
-    LOG_DEBUG("Search uri is: {}", uri.toString());
+//     Poco::URI uri(uriStr);
+//     uri.addQueryParameter("api_key", Config::Instance().GetApiKey());
+//     uri.addQueryParameter("language", "zh-cn");
+//     uri.addQueryParameter("query", keywords);
+//     if (!year.empty()) {
+//         uri.addQueryParameter("year", year);
+//     }
+//     LOG_DEBUG("Search uri is: {}", uri.toString());
 
-    return SendRequest(out, uri);
-}
+//     return SendRequest(out, uri);
+// }
 
-bool GetMovieDetail(std::ostream& out, int tmdbId)
+bool TMDBAPI::GetMovieDetail(std::ostream& out, int tmdbId)
 {
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_MOVIE_DETAIL) + std::to_string(tmdbId);
@@ -95,7 +95,7 @@ bool GetMovieDetail(std::ostream& out, int tmdbId)
     return SendRequest(out, uri);
 }
 
-bool GetTVDetail(std::ostream& out, int tmdbId)
+bool TMDBAPI::GetTVDetail(std::ostream& out, int tmdbId)
 {
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_TV_DETAIL) + std::to_string(tmdbId);
@@ -108,7 +108,7 @@ bool GetTVDetail(std::ostream& out, int tmdbId)
     return SendRequest(out, uri);
 }
 
-bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum)
+bool TMDBAPI::GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum)
 {
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_SEASON_DETAIL);
@@ -126,7 +126,7 @@ bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum)
     return SendRequest(out, uri);
 }
 
-bool GetMovieCredits(std::ostream& out, int tmdbId)
+bool TMDBAPI::GetMovieCredits(std::ostream& out, int tmdbId)
 {
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_MOVIE_CREDITS);
@@ -143,7 +143,7 @@ bool GetMovieCredits(std::ostream& out, int tmdbId)
     return SendRequest(out, uri);
 }
 
-bool GetTVCredits(std::ostream& out, int tmdbId)
+bool TMDBAPI::GetTVCredits(std::ostream& out, int tmdbId)
 {
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_TV_CREDITS);
@@ -160,7 +160,7 @@ bool GetTVCredits(std::ostream& out, int tmdbId)
     return SendRequest(out, uri);
 }
 
-bool DownloadPoster(VideoInfo& videoInfo)
+bool TMDBAPI::DownloadPoster(VideoInfo& videoInfo)
 {
     std::ofstream ofs(videoInfo.posterPath);
     if (!ofs.is_open()) {
@@ -178,7 +178,7 @@ bool DownloadPoster(VideoInfo& videoInfo)
     }
 }
 
-bool UpdateTV(VideoInfo& videoInfo)
+bool TMDBAPI::UpdateTV(VideoInfo& videoInfo)
 {
     if (videoInfo.videoDetail.isEnded) {
         LOG_ERROR("Current video is ended: {}", videoInfo.videoPath);
@@ -186,7 +186,8 @@ bool UpdateTV(VideoInfo& videoInfo)
     }
 
     std::stringstream seasonDetailStream;
-    if (!GetSeasonDetail(seasonDetailStream, videoInfo.videoDetail.uniqueid, videoInfo.videoDetail.seasonNumber)) {
+    if (!GetSeasonDetail(
+            seasonDetailStream, videoInfo.videoDetail.uniqueid.at("tmdb"), videoInfo.videoDetail.seasonNumber)) {
         LOG_ERROR("Get season detail failed for {}", videoInfo.videoPath);
         return false;
     }
@@ -236,7 +237,7 @@ bool UpdateTV(VideoInfo& videoInfo)
     return true;
 }
 
-bool ScrapeMovie(VideoInfo& videoInfo, std::ostream& out)
+bool TMDBAPI::ScrapeMovie(VideoInfo& videoInfo, int movieID)
 {
     videoInfo.videoDetail.genre.clear();
     videoInfo.videoDetail.countries.clear();
@@ -245,46 +246,44 @@ bool ScrapeMovie(VideoInfo& videoInfo, std::ostream& out)
     videoInfo.videoDetail.actors.clear();
 
     std::stringstream sS;
-    if (!GetMovieDetail(sS, videoInfo.videoDetail.uniqueid)) {
-        out << R"({"success": false, "msg": "Get movie detail failed!"})";
+    if (!GetMovieDetail(sS, movieID)) {
+        m_lastErrCode = GET_MOVIE_DETAIL_FAILED;
         return false;
     }
+
     if (!ParseMovieDetailsToVideoDetail(sS, videoInfo.videoDetail)) {
-        out << R"({"success": false, "msg": "Parse movie detail failed!"})";
+        m_lastErrCode = PARSE_MOVIE_DETAIL_FAILED;
         return false;
     }
-    if (!GetMovieCredits(sS, videoInfo.videoDetail.uniqueid)) {
-        out << R"({"success": false, "msg": "Get movie credits failed!"})";
+    videoInfo.videoDetail.uniqueid["tmdb"] = movieID;
+
+    if (!GetMovieCredits(sS, movieID)) {
+        m_lastErrCode = GET_MOVIE_CREDITS_FAILED;
         return false;
     }
+
     if (!ParseCreditsToVideoDetail(sS, videoInfo.videoDetail)) {
-        out << R"({"success": false, "msg": "Parse movie credits failed!"})";
+        m_lastErrCode = PARSE_CREDITS_FAILED;
         return false;
     }
-    if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true)) {
-        out << R"({"success": false, "msg": "Write nfo failed!"})";
+
+    if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true, "tmdb")) {
+        m_lastErrCode = WRITE_NFO_FILE_FAILED;
         return false;
     }
+
     if (!DownloadPoster(videoInfo)) {
-        out << R"({"success": false, "msg": "Download poster failed!"})";
+        m_lastErrCode = DOWNLOAD_POSTER_FAILED;
         return false;
     }
 
     videoInfo.posterStatus = POSTER_COMPELETED;
     videoInfo.nfoStatus = NFO_FORMAT_MATCH;
 
-    Object videoInfoJsonObj;
-    VideoInfoToDetailedJson(videoInfo, videoInfoJsonObj);
-
-    Object outJson;
-    outJson.set("success", true);
-    outJson.set("videoInfo", videoInfoJsonObj);
-
-    outJson.stringify(out);
     return true;
 }
 
-bool ScrapeTV(VideoInfo& videoInfo, std::ostream& out, int seasonId)
+bool TMDBAPI::ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId)
 {
     videoInfo.videoDetail.genre.clear();
     videoInfo.videoDetail.countries.clear();
@@ -293,19 +292,20 @@ bool ScrapeTV(VideoInfo& videoInfo, std::ostream& out, int seasonId)
     videoInfo.videoDetail.actors.clear();
 
     std::stringstream sS;
-    if (!GetTVDetail(sS, videoInfo.videoDetail.uniqueid)) {
-        out << R"({"success": false, "msg": "Get tv detail failed!"})";
+    if (!GetTVDetail(sS, tvId)) {
+        m_lastErrCode = GET_TV_DETAIL_FAILED;
         return false;
     }
 
     if (!ParseTVDetailsToVideoDetail(sS, videoInfo.videoDetail, seasonId)) {
-        out << R"({"success": false, "msg": "Parse tv detail failed!"})";
+        m_lastErrCode = PARSE_TV_DETAIL_FAILED;
         return false;
     }
 
-    if (!GetSeasonDetail(sS, videoInfo.videoDetail.uniqueid, seasonId)) {
-        LOG_ERROR("Get season detail failed for {}", videoInfo.videoPath);
-        out << R"({"success": false, "msg": "Get season detail failed!"})";
+    videoInfo.videoDetail.uniqueid["tmdb"] = tvId;
+
+    if (!GetSeasonDetail(sS, tvId, seasonId)) {
+        m_lastErrCode = GET_SEASON_DETAIL_FAILED;
         return false;
     }
 
@@ -316,7 +316,7 @@ bool ScrapeTV(VideoInfo& videoInfo, std::ostream& out, int seasonId)
         jsonPtr     = result.extract<Object::Ptr>();
     } catch (Poco::Exception& e) {
         LOG_ERROR("Parse season detail failed, text: {}", sS.str());
-        out << R"({"success": false, "msg": "Parse season detail failed!"})";
+        m_lastErrCode = PARSE_SEASON_DETAIL_FAILED;
         return false;
     }
     auto episodesJsonArr = jsonPtr->getArray("episodes");
@@ -328,36 +328,53 @@ bool ScrapeTV(VideoInfo& videoInfo, std::ostream& out, int seasonId)
         videoInfo.videoDetail.episodeNfoCount = videoInfo.videoDetail.episodePaths.size();
     }
 
-    if (!GetTVCredits(sS, videoInfo.videoDetail.uniqueid)) {
-        out << R"({"success": false, "msg": "Get tv credits failed!"})";
+    if (!GetTVCredits(sS, tvId)) {
+        m_lastErrCode = GET_TV_CREDITS_FAILED;
         return false;
     }
 
     if (!ParseCreditsToVideoDetail(sS, videoInfo.videoDetail)) {
-        out << R"({"success": false, "msg": "Parse tv credits failed!"})";
+        m_lastErrCode = PARSE_CREDITS_FAILED;
         return false;
     }
 
-    if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true)) {
-        out << R"({"success": false, "msg": "Write nfo failed!"})";
+    if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true, "tmdb")) {
+        m_lastErrCode = WRITE_NFO_FILE_FAILED;
         return false;
     }
 
     if (!DownloadPoster(videoInfo)) {
-        out << R"({"success": false, "msg": "Download poster failed!"})";
+        m_lastErrCode = DOWNLOAD_POSTER_FAILED;
         return false;
     }
 
     videoInfo.nfoStatus = NFO_FORMAT_MATCH;
     videoInfo.posterStatus = POSTER_COMPELETED;
 
-    Object videoInfoJsonObj;
-    VideoInfoToDetailedJson(videoInfo, videoInfoJsonObj);
-
-    Object outJson;
-    outJson.set("success", true);
-    outJson.set("videoInfo", videoInfoJsonObj);
-    outJson.stringify(out);
-
     return true;
+}
+
+int TMDBAPI::GetLastErrCode()
+{
+    return m_lastErrCode;
+}
+
+const std::string& TMDBAPI::GetLastErrStr()
+{
+    static std::map<ErrCode, std::string> errMap = {
+        {NO_ERR, "No error works, check the server code."},
+        {GET_MOVIE_DETAIL_FAILED, "Get movie detail failed."},
+        {GET_TV_DETAIL_FAILED, "Get tv detail failed."},
+        {GET_SEASON_DETAIL_FAILED, "Get season detail failed."},
+        {GET_TV_CREDITS_FAILED, "Get tv credits failed."},
+        {GET_MOVIE_CREDITS_FAILED, "Get movie credits failed."},
+        {PARSE_MOVIE_DETAIL_FAILED, "Parse movie detail failed."},
+        {PARSE_TV_DETAIL_FAILED, "Parse tv detail failed."},
+        {PARSE_SEASON_DETAIL_FAILED, "Parse season detail failed."},
+        {PARSE_CREDITS_FAILED, "Parse credits failed."},
+        {DOWNLOAD_POSTER_FAILED, "Download poster failed."},
+        {WRITE_NFO_FILE_FAILED, "Write nfo file failed."},
+    };
+
+    return errMap.at(m_lastErrCode);
 }

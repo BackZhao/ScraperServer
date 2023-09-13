@@ -17,7 +17,7 @@
 #include "Logger.h"
 #include "Option.h"
 #include "ResourceManager.h"
-#include "Tmdb.h"
+#include "TMDBAPI.h"
 
 void shutdown()
 {

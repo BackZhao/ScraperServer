@@ -16,19 +16,9 @@
 #include "Config.h"
 #include "Logger.h"
 #include "ResourceManager.h"
+#include "Utils.h"
 
 const std::string WEBUI_BUILD_DIST = "web"; // WEBUI默认生成的路径
-
-void FillWithResponseJson(std::ostream& out, bool isSuccess, const std::string& msg)
-{
-    Poco::JSON::Object jsonObj;
-    jsonObj.set("success", isSuccess);
-    if (!msg.empty()) {
-        jsonObj.set("msg", msg);
-    }
-
-    jsonObj.stringify(out);
-}
 
 void InvalidRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
 {

@@ -246,8 +246,9 @@ add_executable(Demo
   src/ApiManager.cpp
   src/DataConvert.cpp
   src/DataSource.cpp
-  src/Tmdb.cpp
   src/ResourceManager.cpp
+  src/TMDBAPI.cpp
+  src/Utils.cpp
   )
 target_link_libraries(Demo
   PRIVATE
@@ -271,7 +272,8 @@ add_executable(ScraperServer
   src/DataConvert.cpp
   src/DataSource.cpp
   src/ResourceManager.cpp
-  src/Tmdb.cpp
+  src/TMDBAPI.cpp
+  src/Utils.cpp
   )
 target_link_libraries(ScraperServer
   PRIVATE

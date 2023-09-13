@@ -6,7 +6,8 @@
 
 #include "DataConvert.h"
 #include "Logger.h"
-#include "Tmdb.h"
+#include "TMDBAPI.h"
+#include "Utils.h"
 
 void ApiManager::SetScanPaths(std::map<VideoType, std::vector<std::string>> paths)
 {
@@ -257,15 +258,25 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
     }
 
     auto &videoInfo                = m_videoInfos.at(videoType).at(id);
-    videoInfo.videoDetail.uniqueid = std::stoi(param.getValue<std::string>("tmdbid"));
+    int tmdbId = std::stoi(param.getValue<std::string>("tmdbid"));
     std::stringstream sS;
     switch (videoType) {
         case MOVIE: {
-            ScrapeMovie(videoInfo, out);
+            TMDBAPI api;
+            if(!api.ScrapeMovie(videoInfo, tmdbId)) {
+                FillWithResponseJson(out, false, api.GetLastErrStr());
+            } else {
+                FillWithResponseJson(out, true);
+            }
             return;
         }
         case TV: {
-            ScrapeTV(videoInfo, out, seasonId);
+            TMDBAPI api;
+            if (!api.ScrapeTV(videoInfo, tmdbId, seasonId)) {
+                FillWithResponseJson(out, false, api.GetLastErrStr());
+            } else {
+                FillWithResponseJson(out, true);
+            }
             return;
         }
         default:
@@ -356,12 +367,13 @@ void ApiManager::AutoUpdateTV()
 
     std::unique_lock<std::mutex> locker(m_scanInfos.at(TV).lock, std::try_to_lock);
 
+    TMDBAPI api;
     LOG_DEBUG("Search for new episodes...");
     for (auto &videoInfo : m_videoInfos.at(TV)) {
         if (!videoInfo.videoDetail.isEnded &&
             videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
             LOG_INFO("Try to auto update tv info {}...", videoInfo.videoPath);
-            if (!UpdateTV(videoInfo)) {
+            if (!api.UpdateTV(videoInfo)) {
                 LOG_ERROR("Failed to update TV: {}", videoInfo.videoPath);
             }
         }
@@ -394,7 +406,8 @@ void ApiManager::RefreshMovie()
         }
 
         // TODO: API接口调整
-        if (!ScrapeMovie(videoInfo, std::cout)) {
+        TMDBAPI api;
+        if (!api.ScrapeMovie(videoInfo, videoInfo.videoDetail.uniqueid.at("tmdb"))) {
             failedVec.push_back(videoInfo.videoPath);
             continue;
         }
@@ -446,7 +459,8 @@ void ApiManager::RefreshTV()
         LOG_DEBUG("Refreshing TV nfo: {}", videoInfo.videoPath);
 
         // TODO: API接口调整
-        if (!ScrapeTV(videoInfo, std::cout, videoInfo.videoDetail.seasonNumber)) {
+        TMDBAPI api;
+        if (!api.ScrapeTV(videoInfo, videoInfo.videoDetail.uniqueid["tmdb"], videoInfo.videoDetail.seasonNumber)) {
             failedVec.push_back(videoInfo.videoPath);
             continue;
         }
