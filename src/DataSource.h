@@ -30,7 +30,7 @@ private:
     static std::string GetLargestFile(const std::string& path);
 
     static bool ScanMovie(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos);
-    static bool ScanMovieSet(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos)
+    static bool ScanMovieSet(const std::vector<std::string>&, std::vector<VideoInfo>&)
     { /*TODO: 实现电影集的扫描*/
         return true;
     };
