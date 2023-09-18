@@ -266,7 +266,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
             if(!api.ScrapeMovie(videoInfo, tmdbId)) {
                 FillWithResponseJson(out, false, api.GetLastErrStr());
             } else {
-                FillWithResponseJson(out, true);
+                FillWithResponseJson(out, true, "The title is " + videoInfo.videoDetail.title);
             }
             return;
         }
@@ -275,7 +275,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
             if (!api.ScrapeTV(videoInfo, tmdbId, seasonId)) {
                 FillWithResponseJson(out, false, api.GetLastErrStr());
             } else {
-                FillWithResponseJson(out, true);
+                FillWithResponseJson(out, true, "The title is " + videoInfo.videoDetail.title);
             }
             return;
         }
