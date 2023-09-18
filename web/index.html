@@ -117,12 +117,13 @@
 
             created() {
                 this.CheckScanStatus();
-
-                setInterval(() => {
-                    if (this.scanDetail.get(this.currentType).status === 'scanning') {
-                        this.CheckScanStatus();
-                    }
-                }, 1000);
+                    setInterval(() => {
+                        for (type of this.videoType) {
+                            if (this.scanDetail.get(type).status === 'scanning') {
+                                this.CheckScanStatus();
+                            }
+                        }
+                    }, 1000);
             },
 
             methods: {
@@ -145,14 +146,15 @@
                                         break;
                                     case 1:
                                         console.log("远程服务器正在扫描......");
-                                        this.scanDetail.get(this.currentType).status = 'scanning';
+                                        this.scanDetail.get(result.VideoType).status = 'scanning';
                                         break;
                                     case 2:
                                         console.log("远程服务器扫描完成.");
-                                        this.scanDetail.get(this.currentType).totalVideos = result.TotalVideos;
-                                        this.scanDetail.get(this.currentType).status = 'finished';
-                                        this.scanDetail.get(this.currentType).scanBeginTime = result.ScanBeginTime;
-                                        this.scanDetail.get(this.currentType).scanEndTime = result.ScanEndTime;
+                                        this.scanDetail.get(result.VideoType).totalVideos = result.TotalVideos;
+                                        this.scanDetail.get(result.VideoType).status = 'finished';
+                                        this.scanDetail.get(result.VideoType).scanBeginTime = result.ScanBeginTime;
+                                        this.scanDetail.get(result.VideoType).scanEndTime = result.ScanEndTime;
+                                        this.GetUncompletedMovies();
                                         break;
                                     default:
                                         break;
@@ -180,7 +182,7 @@
                         .then((res) => {
                             if (res.success) {
                                 this.scrapeStatus[id] = 'success';
-                                console.log("刮削电影成功: " + res.videoInfo.VideoDetail.Title);
+                                console.log("刮削电影成功, " + res.msg);
                                 console.log(res);
                             } else {
                                 this.scrapeStatus[id] = 'failed';
@@ -196,7 +198,7 @@
                         .then((res) => {
                             if (res.success) {
                                 this.scrapeStatus[id] = 'success';
-                                console.log("刮削电视剧成功: " + res.videoInfo.VideoDetail.Title);
+                                console.log("刮削电视剧成功, " + res.msg);
                                 console.log(res);
                             } else {
                                 this.scrapeStatus[id] = 'failed';
