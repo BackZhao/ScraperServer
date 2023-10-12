@@ -152,7 +152,7 @@ void GetHdrFormat(VideoInfo& videoInfo)
 }
 
 // TODO: 检查是否有多个匹配的海报和nfo文件(依据Kodi的wiki说明)
-void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
+void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
 {
     // 检查NFO文件是否存在
     auto CheckNfo = [&](const std::string& nfoName) {
@@ -193,7 +193,11 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
             videoInfo.posterPath = baseNameWithDir + "-poster.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
-            GetHdrFormat(videoInfo);
+            if (forceDetectHdr || videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+                GetHdrFormat(videoInfo);
+            } else {
+                videoInfo.hdrType = NON_HDR;
+            }
             break;
         }
 
@@ -205,7 +209,11 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo)
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
             CheckEpisodes();
-            GetHdrFormat(videoInfo);
+            if (forceDetectHdr || videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+                GetHdrFormat(videoInfo);
+            } else {
+                videoInfo.hdrType = NON_HDR;
+            }
             break;
         }
 
@@ -263,7 +271,7 @@ std::string DataSource::GetLargestFile(const std::string& path)
     return videos.back().first;
 }
 
-bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<VideoInfo>& videoInfos)
+bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr)
 {
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
@@ -276,7 +284,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
                 if (IsVideo(iter.path().getExtension())) {
                     LOG_TRACE("Found movie: {}", iter->path());
                     VideoInfo videoInfo(MOVIE, iter->path());
-                    CheckVideoStatus(videoInfo);
+                    CheckVideoStatus(videoInfo, forceDetectHdr);
                     videoInfos.push_back(videoInfo);
                 }
             } else if (iter->isDirectory()) { // 仅添加目录下的最大视频文件
@@ -284,7 +292,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
                 if (!largestVideoFile.empty()) {
                     LOG_TRACE("Found movie: {}", largestVideoFile);
                     VideoInfo videoInfo(MOVIE, largestVideoFile);
-                    CheckVideoStatus(videoInfo);
+                    CheckVideoStatus(videoInfo, forceDetectHdr);
                     videoInfos.push_back(videoInfo);
                 }
             }
@@ -296,7 +304,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
     return true;
 }
 
-bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<VideoInfo>& videoInfos)
+bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr)
 {
     // 获取电视剧剧集的路径, 即添加给定目录下所有的视频文件
     auto GetEpisodePaths = [&](VideoInfo& videoInfo) {
@@ -322,7 +330,7 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<Video
             if (iter->isDirectory()) {
                 VideoInfo videoInfo(TV, iter->path());
                 GetEpisodePaths(videoInfo);
-                CheckVideoStatus(videoInfo);
+                CheckVideoStatus(videoInfo, forceDetectHdr);
                 videoInfos.push_back(videoInfo);
             }
             ++iter;
@@ -335,7 +343,8 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<Video
 
 bool DataSource::Scan(VideoType                                            videoType,
                       const std::map<VideoType, std::vector<std::string>>& paths,
-                      std::map<VideoType, std::vector<VideoInfo>>&         videoInfos)
+                      std::map<VideoType, std::vector<VideoInfo>>&         videoInfos,
+                      bool forceDetectHdr)
 {
     LOG_DEBUG("Scanning for type {}...", VIDEO_TYPE_TO_STR.at(videoType));
 
@@ -344,15 +353,15 @@ bool DataSource::Scan(VideoType                                            video
     /* clang-format off */
     // 扫描视频的函数映射表
     using namespace std::placeholders;
-    static std::map<VideoType, std::function<bool(const std::vector<std::string>&, std::vector<VideoInfo>&)>> scanFunc = {
-        {MOVIE,     std::bind(&DataSource::ScanMovie,    _1, _2)},
-        {TV,        std::bind(&DataSource::ScanTv,       _1, _2)},
-        {MOVIE_SET, std::bind(&DataSource::ScanMovieSet, _1, _2)},
+    static std::map<VideoType, std::function<bool(const std::vector<std::string>&, std::vector<VideoInfo>&, bool)>> scanFunc = {
+        {MOVIE,     std::bind(&DataSource::ScanMovie,    _1, _2, _3)},
+        {TV,        std::bind(&DataSource::ScanTv,       _1, _2, _3)},
+        {MOVIE_SET, std::bind(&DataSource::ScanMovieSet, _1, _2, _3)},
     };
     /* clang-format on */
 
     // TODO: paths索引检测
-    return scanFunc.at(videoType)(paths.at(videoType), videoInfos.at(videoType));
+    return scanFunc.at(videoType)(paths.at(videoType), videoInfos.at(videoType), forceDetectHdr);
 }
 
 void DataSource::Cancel()

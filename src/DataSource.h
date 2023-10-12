@@ -13,11 +13,12 @@ public:
 
     static bool Scan(VideoType                                      videoType,
                      const std::map<VideoType, std::vector<std::string>>& paths,
-                     std::map<VideoType, std::vector<VideoInfo>>&   videoInfos);
+                     std::map<VideoType, std::vector<VideoInfo>>&   videoInfos,
+                     bool forceDetectHdr = false);
 
     static void Cancel();
 
-    static void CheckVideoStatus(VideoInfo& videoInfo);
+    static void CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr);
 
     static bool IsMetaCompleted(const VideoInfo& videoInfo);
 
@@ -29,12 +30,13 @@ private:
 
     static std::string GetLargestFile(const std::string& path);
 
-    static bool ScanMovie(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos);
-    static bool ScanMovieSet(const std::vector<std::string>&, std::vector<VideoInfo>&)
+    static bool ScanMovie(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr = false);
+    static bool ScanMovieSet(const std::vector<std::string>&, std::vector<VideoInfo>&, bool forceDetectHdr = false)
     { /*TODO: 实现电影集的扫描*/
+        (void)forceDetectHdr;
         return true;
     };
-    static bool ScanTv(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos);
+    static bool ScanTv(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr = false);
 
 private:
 
