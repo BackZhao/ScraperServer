@@ -163,7 +163,7 @@ HTTPRequestHandler* AppRequestHandlerFactory::CheckAuth(const HTTPServerRequest&
     // 校验用户名密码(admin:kaida)
     Poco::Net::HTTPDigestCredentials credentials("admin", "kaida");
     if (credentials.verifyAuthInfo(request)) {
-        LOG_DEBUG("Authorized success from client {}", request.clientAddress().toString());
+        LOG_TRACE("Authorized success from client {}", request.clientAddress().toString());
         return nullptr;
     } else {
         LOG_ERROR("Authorized failed from client {}", request.clientAddress().toString());
