@@ -54,8 +54,7 @@
                 <th>HDR类型</th>
                 <th>刮削</th>
             </tr>
-            <template v-for="video in unCompletedVideosLists" :key="video.id"
-                v-show="scrapeStatus[video.id] !== 'success'">
+            <template v-for="(video, index) in unCompletedVideosLists" :key="video.id">
                 <tr>
                     <td>{{ video.id }}</td>
                     <td>{{ video.VideoPath }}</td>
@@ -63,15 +62,20 @@
                     <td>{{ this.status2Str[video.PosterStatus] }}</td>
                     <td>{{ video.HDRType }}</td>
                     <td>
-                        <template v-if="scrapeStatus[video.id] !== 'sucesss'">
-                            <input type="text" v-model="scrapeTmdbId[video.id]" placeholder="tmdbId">
-                            <input type="text" v-model="scrapeSeasonId[video.id]" placeholder="seasonId"
+                        <template v-if="video.scrapedTitle === undefined">
+                            <input type="text" v-model="video.scrapeTmdbId" placeholder="tmdbId">
+                            <input type="text" v-model="video.scrapeSeasonId" placeholder="seasonId"
                                 v-if="currentType === 'tv'">
                             <button
-                                @click="currentType === 'movie' ? ScrapeMovie(video.id) : ScrapeTv(video.id)">刮削</button>
+                                @click="currentType === 'movie' ?
+                                ScrapeMovie(index, video.id, video.scrapeTmdbId) : 
+                                ScrapeTv(index, video.id, video.scrapeTmdbId, video.scrapeSeasonId)"
+                            >
+                                刮削
+                            </button>
                         </template>
                         <template v-else>
-                            <div>{{ scrapeStatus[video.id] }}</div>
+                            <div>{{ video.scrapedTitle }}</div>
                         </template>
                     </td>
                 </tr>
@@ -103,9 +107,6 @@
                         ]
                     ),
                     unCompletedVideosLists: [],
-                    scrapeStatus: new Map(),
-                    scrapeTmdbId: new Map(),
-                    scrapeSeasonId: new Map(),
                     status2Str: ['完好', '损坏', '不存在'],
                     apiAddr: window.location.protocol + '//' + window.location.host,
                     // apiAddr: 'http://xanas.backzhao.cn:54250',
@@ -177,34 +178,29 @@
                         });
                 },
 
-                ScrapeMovie(id) {
-                    fetch(this.apiAddr + "/api/scrape?id=" + id + "&tmdbid=" + this.scrapeTmdbId[id] + "&videoType=" + this.currentType, this.requestOptions)
+                ScrapeMovie(index, videoid, tmdbId) {
+                    fetch(this.apiAddr + "/api/scrape?id=" + videoid + "&tmdbid=" + tmdbId + "&videoType=" + this.currentType, this.requestOptions)
                         .then((res) => res.json())
                         .then((res) => {
                             if (res.success) {
-                                this.scrapeStatus[id] = 'success';
-                                console.log("刮削电影成功, " + res.msg);
-                                console.log(res);
+                                console.log("刮削电影成功, 标题: " + res.msg);
+                                this.unCompletedVideosLists[index].scrapedTitle = res.msg;
                             } else {
-                                this.scrapeStatus[id] = 'failed';
-                                console.log("刮削电影失败:");
-                                console.log(res);
+                                console.log("刮削电影失败: " + res.msg);
                             }
                         });
                 },
 
-                ScrapeTv(id) {
-                    fetch(this.apiAddr + "/api/scrape?id=" + id + "&tmdbid=" + this.scrapeTmdbId[id] + "&videoType=" + this.currentType + "&seasonId=" + this.scrapeSeasonId[id], this.requestOptions)
+                ScrapeTv(index, videoid, tmdbId, seasonId) {
+                    fetch(this.apiAddr + "/api/scrape?id=" + videoid + "&tmdbid=" + tmdbId + "&videoType=" + this.currentType + "&seasonId=" + seasonId, this.requestOptions)
                         .then((res) => res.json())
                         .then((res) => {
                             if (res.success) {
-                                this.scrapeStatus[id] = 'success';
-                                console.log("刮削电视剧成功, " + res.msg);
+                                console.log("刮削电视剧成功, 标题: " + res.msg);
+                                this.unCompletedVideosLists[index].scrapedTitle = res.msg;
                                 console.log(res);
                             } else {
-                                this.scrapeStatus[id] = 'failed';
-                                console.log("刮削电视剧失败:");
-                                console.log(res);
+                                console.log("刮削电视剧失败: " + res.msg);
                             }
                         });
                 }
