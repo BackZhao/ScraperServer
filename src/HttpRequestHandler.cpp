@@ -78,7 +78,7 @@ void ApiRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResp
 
 void IndexRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
 {
-    LOG_DEBUG("Index request from {}", request.clientAddress().toString());
+    LOG_TRACE("Index request from {}", request.clientAddress().toString());
 
     response.setChunkedTransferEncoding(true);
     std::string indexFile = WEBUI_BUILD_DIST + "/index.html";
@@ -133,7 +133,7 @@ std::string ResRequestHandler::MimeType(const std::string& fileName)
 
 void ResRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response)
 {
-    LOG_DEBUG("Static res request from {}", request.clientAddress().toString());
+    LOG_TRACE("Static res request from {}", request.clientAddress().toString());
 
     std::string fileName = WEBUI_BUILD_DIST + request.getURI();
     response.setContentType(MimeType(fileName));
@@ -163,7 +163,7 @@ HTTPRequestHandler* AppRequestHandlerFactory::CheckAuth(const HTTPServerRequest&
     // 校验用户名密码(admin:kaida)
     Poco::Net::HTTPDigestCredentials credentials("admin", "kaida");
     if (credentials.verifyAuthInfo(request)) {
-        LOG_TRACE("Authorized success from client {}", request.clientAddress().toString());
+        LOG_DEBUG("Authorized success from client {}", request.clientAddress().toString());
         return nullptr;
     } else {
         LOG_ERROR("Authorized failed from client {}", request.clientAddress().toString());
