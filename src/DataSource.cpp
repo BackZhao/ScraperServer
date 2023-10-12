@@ -341,14 +341,14 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<Video
     return true;
 }
 
-bool DataSource::Scan(VideoType                                            videoType,
-                      const std::map<VideoType, std::vector<std::string>>& paths,
-                      std::map<VideoType, std::vector<VideoInfo>>&         videoInfos,
-                      bool forceDetectHdr)
+bool DataSource::Scan(VideoType                       videoType,
+                     const std::vector<std::string>& paths,
+                     std::vector<VideoInfo>&         videoInfos,
+                     bool                            forceDetectHdr)
 {
     LOG_DEBUG("Scanning for type {}...", VIDEO_TYPE_TO_STR.at(videoType));
 
-    videoInfos.at(videoType).clear();
+    videoInfos.clear();
 
     /* clang-format off */
     // 扫描视频的函数映射表
@@ -361,7 +361,7 @@ bool DataSource::Scan(VideoType                                            video
     /* clang-format on */
 
     // TODO: paths索引检测
-    return scanFunc.at(videoType)(paths.at(videoType), videoInfos.at(videoType), forceDetectHdr);
+    return scanFunc.at(videoType)(paths, videoInfos, forceDetectHdr);
 }
 
 void DataSource::Cancel()

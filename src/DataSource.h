@@ -11,10 +11,10 @@ class DataSource
 {
 public:
 
-    static bool Scan(VideoType                                      videoType,
-                     const std::map<VideoType, std::vector<std::string>>& paths,
-                     std::map<VideoType, std::vector<VideoInfo>>&   videoInfos,
-                     bool forceDetectHdr = false);
+    static bool Scan(VideoType                       videoType,
+                     const std::vector<std::string>& paths,
+                     std::vector<VideoInfo>&         videoInfos,
+                     bool                            forceDetectHdr = false);
 
     static void Cancel();
 

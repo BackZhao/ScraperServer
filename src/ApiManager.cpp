@@ -19,7 +19,7 @@ void ApiManager::ProcessScan(VideoType videoType)
     std::unique_lock<std::mutex> locker(m_scanInfos[videoType].lock, std::try_to_lock);
     m_scanInfos[videoType].scanStatus    = SCANNING;
     m_scanInfos[videoType].scanBeginTime = Poco::DateTime();
-    DataSource::Scan(videoType, m_paths, m_videoInfos);
+    DataSource::Scan(videoType, m_paths.at(videoType), m_videoInfos.at(videoType));
     m_scanInfos[videoType].scanEndTime = Poco::DateTime();
     m_scanInfos[videoType].scanStatus  = SCANNING_FINISHED;
 }
