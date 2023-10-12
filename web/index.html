@@ -37,13 +37,14 @@
         <button @click="ScanMovie" :disabled="scanDetail.get(currentType).status === 'scanning'">扫描</button>
         <button @click="GetUncompletedMovies"
             :disabled="scanDetail.get(currentType).status !== 'finished'">获取列表</button>
-        <div>扫描开始时间: {{ scanDetail.get(currentType).scanBeginTime }}</div><br>
-        <div>扫描结束时间: {{ scanDetail.get(currentType).scanEndTime }}</div><br>
-        <div>视频总数: {{ scanDetail.get(currentType).totalVideos }}</div><br>
+        <div>扫描状态: {{ scanDetail.get(currentType).status }}</div>
+        <div>扫描开始时间: {{ scanDetail.get(currentType).scanBeginTime }}</div>
+        <div>扫描结束时间: {{ scanDetail.get(currentType).scanEndTime }}</div>
+        <div>视频总数: {{ scanDetail.get(currentType).totalVideos }}</div>
 
         <!-- <template v-if="unCompletedVideosLists.length !== 0"> -->
         <!-- <template> -->
-        <div>不完整视频总数: {{ unCompletedVideosLists.length }}</div><br>
+        <div>不完整视频总数: {{ unCompletedVideosLists.length }}</div>
         <table>
             <tr>
                 <th>ID</th>
@@ -58,7 +59,7 @@
                 <tr>
                     <td>{{ video.id }}</td>
                     <td>{{ video.VideoPath }}</td>
-                    <td>{{ this.status2Str[video.NfoStatus] }}</td>
+                    <td :style="{ color: video.NfoStatus == 1 ? 'red' : 'black' }" >{{ this.status2Str[video.NfoStatus] }}</td>
                     <td>{{ this.status2Str[video.PosterStatus] }}</td>
                     <td>{{ video.HDRType }}</td>
                     <td>
@@ -142,14 +143,14 @@
                             for (result of res) {
                                 switch (result.ScanStatus) {
                                     case 0:
-                                        console.log("远程服务器尚未进行扫描.");
+                                        // console.log("远程服务器尚未进行扫描.");
                                         break;
                                     case 1:
-                                        console.log("远程服务器正在扫描......");
+                                        // console.log("远程服务器正在扫描......");
                                         this.scanDetail.get(result.VideoType).status = 'scanning';
                                         break;
                                     case 2:
-                                        console.log("远程服务器扫描完成.");
+                                        // console.log("远程服务器扫描完成.");
                                         this.scanDetail.get(result.VideoType).totalVideos = result.TotalVideos;
                                         this.scanDetail.get(result.VideoType).status = 'finished';
                                         this.scanDetail.get(result.VideoType).scanBeginTime = result.ScanBeginTime;
