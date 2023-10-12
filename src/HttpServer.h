@@ -22,7 +22,7 @@ public:
      * @brief 无参构造函数
      *
      */
-    HTTPServerApp() {}
+    HTTPServerApp() : m_httpServer(nullptr) {}
 
     /**
      * @brief 析构函数
