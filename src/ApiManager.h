@@ -99,6 +99,14 @@ public:
     void RefreshMovie();
     void RefreshTV();
 
+    /**
+     * @brief 获取内部日志
+     *
+     * @param param API请求参数
+     * @param out API响应回填输出流
+     */
+    void InterLog(const Poco::JSON::Object &param, std::ostream &out);
+
 private:
 
     ApiManager()

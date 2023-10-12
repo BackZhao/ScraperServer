@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
 
     // 初始化日志记录器
     if (!Logger::Instance().Init(static_cast<spdlog::level::level_enum>(Config::Instance().GetLogLevel()),
+                                 option.IsDaemon(),
                                  Config::Instance().GetLogFile())) {
         return 1;
     }

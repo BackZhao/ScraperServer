@@ -489,3 +489,11 @@ void ApiManager::RefreshTV()
     }
     LOG_DEBUG("Refresh tv nfos finished.");
 }
+
+void ApiManager::InterLog(const Poco::JSON::Object&, std::ostream& out)
+{
+    Poco::JSON::Object jsonObj;
+    jsonObj.set("success", true);
+    jsonObj.set("interlog", Logger::Instance().GetInterLog());
+    jsonObj.stringify(out);
+}

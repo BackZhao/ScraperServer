@@ -1,5 +1,10 @@
 #pragma once
 
+#include <sstream>
+
+#include <spdlog/sinks/ringbuffer_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 const size_t DEFAULT_LOGFILE_SIZE  = 5UL * 1024UL * 1024UL; // 默认的日志文件大小, 5MiB
@@ -27,6 +32,11 @@ public:
      */
     static Logger& Instance();
 
+    ~Logger()
+    {
+        spdlog::shutdown();
+    }
+
     /**
      * @brief 初始化日志记录器
      *
@@ -38,9 +48,24 @@ public:
      * @return false 初始化失败
      */
     bool Init(spdlog::level::level_enum level,
-                     const std::string&        logFile  = "",
-                     size_t                    maxSize  = DEFAULT_LOGFILE_SIZE,
-                     size_t                    maxCount = DEFAULT_LOGFILE_COUNT);
+              bool                      isDaemon = false,
+              const std::string&        logFile  = "",
+              size_t                    maxSize  = DEFAULT_LOGFILE_SIZE,
+              size_t                    maxCount = DEFAULT_LOGFILE_COUNT);
+
+    /**
+     * @brief 获取内部日志
+     *
+     * @return std::vector<std::string 保留的所有内部日志
+     */
+    const std::vector<std::string> GetInterLog()
+    {
+        if (m_ringbufferSink) {
+            return m_ringbufferSink->last_formatted();
+        } else {
+            return std::vector<std::string>();
+        }
+    }
 
     /**
      * @brief 记录日志
@@ -66,5 +91,8 @@ private:
      */
     Logger(){};
 
-    std::shared_ptr<spdlog::logger> m_logger; // spdlog的日志日志记录器
+    std::shared_ptr<spdlog::logger>                       m_logger;         // spdlog的日志记录器
+    std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> m_fileSink;       // 标准输出日志接收器
+    std::shared_ptr<spdlog::sinks::stdout_color_sink_mt>  m_stdoutSink;     // 标准输出日志接收器
+    std::shared_ptr<spdlog::sinks::ringbuffer_sink_mt>    m_ringbufferSink; // 环形队列日志接收器
 };
