@@ -271,8 +271,14 @@ std::string DataSource::GetLargestFile(const std::string& path)
     return videos.back().first;
 }
 
-bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr)
+bool DataSource::ScanMovie(const std::vector<std::string>& paths,
+                          std::vector<VideoInfo>&         videoInfos,
+                          std::atomic<std::size_t>&       processedVideoNum,
+                          bool                            forceDetectHdr)
 {
+    // 清除历史数据
+    processedVideoNum = 0;
+
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
         Poco::SortedDirectoryIterator iter(moviePath);
@@ -284,7 +290,6 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
                 if (IsVideo(iter.path().getExtension())) {
                     LOG_TRACE("Found movie: {}", iter->path());
                     VideoInfo videoInfo(MOVIE, iter->path());
-                    CheckVideoStatus(videoInfo, forceDetectHdr);
                     videoInfos.push_back(videoInfo);
                 }
             } else if (iter->isDirectory()) { // 仅添加目录下的最大视频文件
@@ -292,7 +297,6 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
                 if (!largestVideoFile.empty()) {
                     LOG_TRACE("Found movie: {}", largestVideoFile);
                     VideoInfo videoInfo(MOVIE, largestVideoFile);
-                    CheckVideoStatus(videoInfo, forceDetectHdr);
                     videoInfos.push_back(videoInfo);
                 }
             }
@@ -300,12 +304,23 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths, std::vector<Vi
         }
     }
 
+    for (auto& videoInfo : videoInfos) {
+        CheckVideoStatus(videoInfo, forceDetectHdr);
+        processedVideoNum++;
+    }
+
     LOG_DEBUG("Scan movie finished.");
     return true;
 }
 
-bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr)
+bool DataSource::ScanTv(const std::vector<std::string>& paths,
+                       std::vector<VideoInfo>&         videoInfos,
+                       std::atomic<std::size_t>&       processedVideoNum,
+                       bool                            forceDetectHdr)
 {
+    // 清除历史数据
+    processedVideoNum = 0;
+
     // 获取电视剧剧集的路径, 即添加给定目录下所有的视频文件
     auto GetEpisodePaths = [&](VideoInfo& videoInfo) {
         Poco::SortedDirectoryIterator iter(videoInfo.videoPath);
@@ -329,12 +344,16 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<Video
             // 电视剧仅添加一级目录
             if (iter->isDirectory()) {
                 VideoInfo videoInfo(TV, iter->path());
-                GetEpisodePaths(videoInfo);
-                CheckVideoStatus(videoInfo, forceDetectHdr);
                 videoInfos.push_back(videoInfo);
             }
             ++iter;
         }
+    }
+
+    for (auto& videoInfo : videoInfos) {
+        GetEpisodePaths(videoInfo);
+        CheckVideoStatus(videoInfo, forceDetectHdr);
+        processedVideoNum++;
     }
 
     LOG_DEBUG("Scan tv finished.");
@@ -342,9 +361,10 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths, std::vector<Video
 }
 
 bool DataSource::Scan(VideoType                       videoType,
-                     const std::vector<std::string>& paths,
-                     std::vector<VideoInfo>&         videoInfos,
-                     bool                            forceDetectHdr)
+                      const std::vector<std::string>& paths,
+                      std::vector<VideoInfo>&         videoInfos,
+                      std::atomic<std::size_t>&       processedVideoNum,
+                      bool                            forceDetectHdr)
 {
     LOG_DEBUG("Scanning for type {}...", VIDEO_TYPE_TO_STR.at(videoType));
 
@@ -353,15 +373,15 @@ bool DataSource::Scan(VideoType                       videoType,
     /* clang-format off */
     // 扫描视频的函数映射表
     using namespace std::placeholders;
-    static std::map<VideoType, std::function<bool(const std::vector<std::string>&, std::vector<VideoInfo>&, bool)>> scanFunc = {
-        {MOVIE,     std::bind(&DataSource::ScanMovie,    _1, _2, _3)},
-        {TV,        std::bind(&DataSource::ScanTv,       _1, _2, _3)},
-        {MOVIE_SET, std::bind(&DataSource::ScanMovieSet, _1, _2, _3)},
+    static std::map<VideoType, std::function<bool(const std::vector<std::string>&, std::vector<VideoInfo>&, std::atomic<std::size_t>&, bool)>> scanFunc = {
+        {MOVIE,     std::bind(&DataSource::ScanMovie,    _1, _2, _3, _4)},
+        {TV,        std::bind(&DataSource::ScanTv,       _1, _2, _3, _4)},
+        {MOVIE_SET, std::bind(&DataSource::ScanMovieSet, _1, _2, _3, _4)},
     };
     /* clang-format on */
 
     // TODO: paths索引检测
-    return scanFunc.at(videoType)(paths, videoInfos, forceDetectHdr);
+    return scanFunc.at(videoType)(paths, videoInfos, processedVideoNum, forceDetectHdr);
 }
 
 void DataSource::Cancel()

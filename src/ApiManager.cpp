@@ -16,12 +16,16 @@ void ApiManager::SetScanPaths(std::map<VideoType, std::vector<std::string>> path
 
 void ApiManager::ProcessScan(VideoType videoType)
 {
-    std::unique_lock<std::mutex> locker(m_scanInfos[videoType].lock, std::try_to_lock);
-    m_scanInfos[videoType].scanStatus    = SCANNING;
-    m_scanInfos[videoType].scanBeginTime = Poco::DateTime();
-    DataSource::Scan(videoType, m_paths.at(videoType), m_videoInfos.at(videoType));
-    m_scanInfos[videoType].scanEndTime = Poco::DateTime();
-    m_scanInfos[videoType].scanStatus  = SCANNING_FINISHED;
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
+    m_scanInfos.at(videoType).scanStatus    = SCANNING;
+    m_scanInfos.at(videoType).scanBeginTime = Poco::DateTime();
+    DataSource::Scan(videoType,
+                     m_paths.at(videoType),
+                     m_videoInfos.at(videoType),
+                     m_scanInfos.at(videoType).processedVideoNum,
+                     true);
+    m_scanInfos.at(videoType).scanEndTime = Poco::DateTime();
+    m_scanInfos.at(videoType).scanStatus  = SCANNING_FINISHED;
 }
 
 void ApiManager::Scan(const Poco::JSON::Object &param, std::ostream &out)
@@ -41,7 +45,7 @@ void ApiManager::Scan(const Poco::JSON::Object &param, std::ostream &out)
     VideoType videoType = findResult->second;
 
     // 无法加锁说明后台正在扫描
-    std::unique_lock<std::mutex> locker(m_scanInfos[videoType].lock, std::try_to_lock);
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
     if (!locker.owns_lock()) {
         out << R"({"success": false, "msg": "Still scanning!"})";
         return;
@@ -75,6 +79,8 @@ void ApiManager::ScanResult(const Poco::JSON::Object&, std::ostream &out)
             scanInfoJsonObj.set("ScanStatus", static_cast<int>(SCANNING));
             scanInfoJsonObj.set("ScanBeginTime",
                                 Poco::DateTimeFormatter::format(scanInfo.scanBeginTime, "%Y-%m-%d %H:%M:%S"));
+            scanInfoJsonObj.set("TotalVideoNum", static_cast<std::size_t>(m_videoInfos.at(scanInfoPair.first).size()));
+            scanInfoJsonObj.set("ProcessedVideoNum", scanInfo.processedVideoNum.load());
         } else if (scanInfo.scanStatus == NEVER_SCANNED) {
             scanInfoJsonObj.set("ScanStatus", static_cast<int>(scanInfo.scanStatus));
         } else {
@@ -83,7 +89,7 @@ void ApiManager::ScanResult(const Poco::JSON::Object&, std::ostream &out)
                                 Poco::DateTimeFormatter::format(scanInfo.scanBeginTime, "%Y-%m-%d %H:%M:%S"));
             scanInfoJsonObj.set("ScanEndTime",
                                 Poco::DateTimeFormatter::format(scanInfo.scanEndTime, "%Y-%m-%d %H:%M:%S"));
-            scanInfoJsonObj.set("TotalVideos", static_cast<std::size_t>(m_videoInfos.at(scanInfoPair.first).size()));
+            scanInfoJsonObj.set("TotalVideoNum", static_cast<std::size_t>(m_videoInfos.at(scanInfoPair.first).size()));
         }
         outJsonArr.add(scanInfoJsonObj);
     }
@@ -136,7 +142,7 @@ void ApiManager::List(const Poco::JSON::Object &param, std::ostream &out)
     if (!locker.owns_lock()) {
         out << R"({"success": false, "msg": "Scanning/refreshing job is still unfinished!"})";
         return;
-    } else if (m_scanInfos[videoType].scanStatus == NEVER_SCANNED) {
+    } else if (m_scanInfos.at(videoType).scanStatus == NEVER_SCANNED) {
         out << R"({"success": false, "msg": "The datasource has never been scanned, please scan first!"})";
         return;
     } else {
@@ -193,7 +199,7 @@ void ApiManager::Detail(const Poco::JSON::Object &param, std::ostream &out)
 
     Poco::JSON::Object outJsonObj;
     std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
-    if (locker.owns_lock() && m_scanInfos[videoType].scanStatus != NEVER_SCANNED) {
+    if (locker.owns_lock() && m_scanInfos.at(videoType).scanStatus != NEVER_SCANNED) {
         size_t id = std::stoull(param.getValue<std::string>("id"));
         if (id >= m_videoInfos.at(videoType).size()) { // 防止ID越界
             out << R"({"success": false, "msg": "Id is out of range!"})";
@@ -236,7 +242,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
         return;
     }
 
-    if (m_scanInfos[videoType].scanStatus == NEVER_SCANNED) {
+    if (m_scanInfos.at(videoType).scanStatus == NEVER_SCANNED) {
         out << R"({"success": false, "msg": "Never scanned!"})";
         return;
     }
@@ -256,6 +262,8 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
         }
         seasonId = std::stoi(param.getValue<std::string>("seasonId"));
     }
+
+    // TODO: 当NFO文件损坏时, 必须制定force才进行刮削
 
     auto &videoInfo                = m_videoInfos.at(videoType).at(id);
     int tmdbId = std::stoi(param.getValue<std::string>("tmdbid"));
@@ -316,7 +324,7 @@ void ApiManager::Refresh(const Poco::JSON::Object &param, std::ostream &out)
     VideoType videoType = findResult->second;
 
     // 无法加锁说明后台正在扫描
-    std::unique_lock<std::mutex> locker(m_scanInfos[videoType].lock, std::try_to_lock);
+    std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
     if (!locker.owns_lock()) {
         out << R"({"success": false, "msg": "Still refreshing!"})";
         return;
@@ -349,7 +357,7 @@ void ApiManager::RefreshResult(const Poco::JSON::Object &, std::ostream &out)
                                    Poco::DateTimeFormatter::format(refreshInfo.refreshBeginTime, "%Y-%m-%d %H:%M:%S"));
             refreshInfoJsonObj.set("RefreshEndTime",
                                    Poco::DateTimeFormatter::format(refreshInfo.refreshEndTime, "%Y-%m-%d %H:%M:%S"));
-            refreshInfoJsonObj.set("TotalVideos",
+            refreshInfoJsonObj.set("TotalVideoNum",
                                    static_cast<std::size_t>(m_videoInfos.at(refreshInfoPair.first).size()));
         }
         outJsonArr.add(refreshInfoJsonObj);

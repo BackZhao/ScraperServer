@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <map>
 #include <mutex>
 #include <string>
@@ -14,6 +15,7 @@ public:
     static bool Scan(VideoType                       videoType,
                      const std::vector<std::string>& paths,
                      std::vector<VideoInfo>&         videoInfos,
+                     std::atomic<std::size_t>&       processedVideoNum,
                      bool                            forceDetectHdr = false);
 
     static void Cancel();
@@ -30,13 +32,21 @@ private:
 
     static std::string GetLargestFile(const std::string& path);
 
-    static bool ScanMovie(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr = false);
-    static bool ScanMovieSet(const std::vector<std::string>&, std::vector<VideoInfo>&, bool forceDetectHdr = false)
+    static bool ScanMovie(const std::vector<std::string>& path,
+                          std::vector<VideoInfo>&         videoInfos,
+                          std::atomic<std::size_t>&       processedVideoNum,
+                          bool                            forceDetectHdr);
+    static bool ScanMovieSet(const std::vector<std::string>&,
+                             std::vector<VideoInfo>&,
+                             std::atomic<std::size_t>&,
+                             bool)
     { /*TODO: 实现电影集的扫描*/
-        (void)forceDetectHdr;
         return true;
     };
-    static bool ScanTv(const std::vector<std::string>& path, std::vector<VideoInfo>& videoInfos, bool forceDetectHdr = false);
+    static bool ScanTv(const std::vector<std::string>& path,
+                       std::vector<VideoInfo>&         videoInfos,
+                       std::atomic<std::size_t>&       processedVideoNum,
+                       bool                            forceDetectHdr);
 
 private:
 

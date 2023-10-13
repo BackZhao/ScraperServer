@@ -35,11 +35,12 @@ class ApiManager
             // copy constructor
         }
 
-        ScanSatus           scanStatus;
-        Poco::LocalDateTime scanBeginTime;
-        Poco::LocalDateTime scanEndTime;
-        std::string         clientAddr;
-        std::mutex          lock;
+        ScanSatus                scanStatus;
+        std::atomic<std::size_t> processedVideoNum;
+        Poco::LocalDateTime      scanBeginTime;
+        Poco::LocalDateTime      scanEndTime;
+        std::string              clientAddr;
+        std::mutex               lock;
     };
 
     enum RefreshStatus {

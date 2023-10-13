@@ -38,9 +38,10 @@
         <button @click="GetUncompletedMovies"
             :disabled="scanDetail.get(currentType).status !== 'finished'">获取列表</button>
         <div>扫描状态: {{ scanDetail.get(currentType).status }}</div>
+        <div>扫描进度: {{ scanDetail.get(currentType).status === 'finished' ? '100%' : scanDetail.get(currentType).processedVideoNum + '/' + scanDetail.get(currentType).totalVideoNum }}</div>
         <div>扫描开始时间: {{ scanDetail.get(currentType).scanBeginTime }}</div>
         <div>扫描结束时间: {{ scanDetail.get(currentType).scanEndTime }}</div>
-        <div>视频总数: {{ scanDetail.get(currentType).totalVideos }}</div>
+        <div>视频总数: {{ scanDetail.get(currentType).totalVideoNum }}</div>
 
         <!-- <template v-if="unCompletedVideosLists.length !== 0"> -->
         <!-- <template> -->
@@ -96,13 +97,15 @@
                                 status: 'not scanned',
                                 scanBeginTime: '',
                                 scanEndTime: '',
-                                totalVideos: 0,
+                                totalVideoNum: 0,
+                                processedVideoNum: 0,
                             }],
                             ['tv', {
                                 status: 'not scanned',
                                 scanBeginTime: '',
                                 scanEndTime: '',
-                                totalVideos: 0,
+                                totalVideoNum: 0,
+                                processedVideoNum: 0,
                             }],
                         ]
                     ),
@@ -149,10 +152,12 @@
                                     case 1:
                                         // console.log("远程服务器正在扫描......");
                                         this.scanDetail.get(result.VideoType).status = 'scanning';
+                                        this.scanDetail.get(result.VideoType).totalVideoNum = result.TotalVideoNum;
+                                        this.scanDetail.get(result.VideoType).processedVideoNum = result.ProcessedVideoNum;
                                         break;
                                     case 2:
                                         // console.log("远程服务器扫描完成.");
-                                        this.scanDetail.get(result.VideoType).totalVideos = result.TotalVideos;
+                                        this.scanDetail.get(result.VideoType).totalVideoNum = result.TotalVideoNum;
                                         this.scanDetail.get(result.VideoType).status = 'finished';
                                         this.scanDetail.get(result.VideoType).scanBeginTime = result.ScanBeginTime;
                                         this.scanDetail.get(result.VideoType).scanEndTime = result.ScanEndTime;
@@ -185,6 +190,8 @@
                             if (res.success) {
                                 console.log("刮削电影成功, 标题: " + res.msg);
                                 this.unCompletedVideosLists[index].scrapedTitle = res.msg;
+                                this.unCompletedVideosLists[index].NfoStatus = 0;
+                                this.unCompletedVideosLists[index].PosterStatus = 0;
                             } else {
                                 console.log("刮削电影失败: " + res.msg);
                             }
@@ -198,6 +205,8 @@
                             if (res.success) {
                                 console.log("刮削电视剧成功, 标题: " + res.msg);
                                 this.unCompletedVideosLists[index].scrapedTitle = res.msg;
+                                this.unCompletedVideosLists[index].NfoStatus = 0;
+                                this.unCompletedVideosLists[index].PosterStatus = 0;
                                 console.log(res);
                             } else {
                                 console.log("刮削电视剧失败: " + res.msg);
