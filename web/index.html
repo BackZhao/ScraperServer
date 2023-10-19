@@ -31,10 +31,11 @@
 
 <body>
     <div id="app">
+        <input type="checkbox" v-model="forceDetectHdr">强制检测HDR<br>
         <template v-for="type in videoType">
             <input type="radio" v-model="currentType" :value="type">{{ type }}<br>
         </template>
-        <button @click="ScanMovie" :disabled="scanDetail.get(currentType).status === 'scanning'">扫描</button>
+        <button @click="Scan" :disabled="scanDetail.get(currentType).status === 'scanning'">扫描</button>
         <button @click="GetUncompletedMovies"
             :disabled="scanDetail.get(currentType).status !== 'finished'">获取列表</button>
         <div>扫描状态: {{ scanDetail.get(currentType).status }}</div>
@@ -88,6 +89,7 @@
                 return {
                     videoType: ['movie', 'tv'],
                     currentType: 'movie',
+                    forceDetectHdr: false,
                     scanDetail: new Map(
                         [
                             ['movie', {
@@ -109,7 +111,7 @@
                     unCompletedVideosLists: [],
                     status2Str: ['完好', '损坏', '不存在'],
                     apiAddr: window.location.protocol + '//' + window.location.host,
-                    // apiAddr: 'http://xanas.backzhao.cn:54250',
+                    //apiAddr: 'http://xanas.backzhao.cn:54250',
                     requestOptions: {
                         method: 'GET',
                         credentials: 'include', // 这将包括凭据在请求中
@@ -129,8 +131,8 @@
             },
 
             methods: {
-                ScanMovie() {
-                    fetch(this.apiAddr + "/api/scan?videoType=" + this.currentType + "", this.requestOptions)
+                Scan() {
+                    fetch(this.apiAddr + "/api/scan?videoType=" + this.currentType + (this.forceDetectHdr ? "&forceDetectHdr" : ""), this.requestOptions)
                         .then((res) => res.json())
                         .then((res) => {
                             this.scanDetail.get(this.currentType).status = res.success ? 'scanning' : 'failed';

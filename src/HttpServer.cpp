@@ -20,7 +20,7 @@ void HTTPServerApp::AutoUpdate()
     while (m_signum.load() == -1) {
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {
-            ApiManager::Instance().ProcessScan(TV);
+            ApiManager::Instance().ProcessScan(TV, true);
             ApiManager::Instance().AutoUpdateTV();
             lastUpdateTime = std::chrono::steady_clock::now();
         }

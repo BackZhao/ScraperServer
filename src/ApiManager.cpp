@@ -14,7 +14,7 @@ void ApiManager::SetScanPaths(std::map<VideoType, std::vector<std::string>> path
     m_paths = paths;
 }
 
-void ApiManager::ProcessScan(VideoType videoType)
+void ApiManager::ProcessScan(VideoType videoType, bool forceDetectHdr)
 {
     std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
     m_scanInfos.at(videoType).scanStatus    = SCANNING;
@@ -23,7 +23,7 @@ void ApiManager::ProcessScan(VideoType videoType)
                      m_paths.at(videoType),
                      m_videoInfos.at(videoType),
                      m_scanInfos.at(videoType).processedVideoNum,
-                     true);
+                     forceDetectHdr);
     m_scanInfos.at(videoType).scanEndTime = Poco::DateTime();
     m_scanInfos.at(videoType).scanStatus  = SCANNING_FINISHED;
 }
@@ -52,7 +52,8 @@ void ApiManager::Scan(const Poco::JSON::Object &param, std::ostream &out)
     }
 
     // 加锁后在新线程进行扫描
-    std::thread scanThread(std::bind(&ApiManager::ProcessScan, this, std::placeholders::_1), videoType);
+    std::thread scanThread(std::bind(&ApiManager::ProcessScan, this, std::placeholders::_1, std::placeholders::_2),
+                           videoType, param.optValue("forceDetectHdr", false));
     scanThread.detach();
 
     out << R"({"success": true, "msg": "Begin scanning!"})";
@@ -62,7 +63,7 @@ void ApiManager::ScanAll()
 {
     for (int videoType = MOVIE; videoType < UNKNOWN_TYPE; videoType++) {
         if (m_paths.find(static_cast<VideoType>(videoType)) != m_paths.end()) {
-            ProcessScan(static_cast<VideoType>(videoType));
+            ProcessScan(static_cast<VideoType>(videoType), false);
         }
     }
 }
@@ -295,7 +296,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
 
 void ApiManager::ProcessRefresh(VideoType videoType)
 {
-    ProcessScan(videoType);
+    ProcessScan(videoType, true);
 
     std::unique_lock<std::mutex> locker(m_refreshInfos[videoType].lock, std::try_to_lock);
     m_refreshInfos[videoType].refreshStatus = REFRESHING;
