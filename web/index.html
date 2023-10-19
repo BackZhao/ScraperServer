@@ -26,6 +26,21 @@
         input {
             width: 60px;
         }
+
+        footer {
+            background-color: #f8f8f8;
+            padding: 20px;
+            text-align: center;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        footer p {
+            margin: 0;
+            font-size: 14px;
+            color: #333;
+        }
     </style>
 </head>
 
@@ -80,13 +95,18 @@
                 </tr>
             </template>
         </table>
-        <!-- </template> -->
+
+        
+        <footer>
+            <p>服务端版本号: {{ serverVersion }}</p>
+        </footer>
     </div>
 
     <script>
         let app = Vue.createApp({
             data() {
                 return {
+                    serverVersion: '',
                     videoType: ['movie', 'tv'],
                     currentType: 'movie',
                     forceDetectHdr: false,
@@ -121,13 +141,14 @@
 
             created() {
                 this.CheckScanStatus();
-                    setInterval(() => {
-                        for (type of this.videoType) {
-                            if (this.scanDetail.get(type).status === 'scanning') {
-                                this.CheckScanStatus();
-                            }
+                this.GetVersion();
+                setInterval(() => {
+                    for (type of this.videoType) {
+                        if (this.scanDetail.get(type).status === 'scanning') {
+                            this.CheckScanStatus();
                         }
-                    }, 1000);
+                    }
+                }, 1000);
             },
 
             methods: {
@@ -206,11 +227,23 @@
                                 this.unCompletedVideosLists[index].scrapedTitle = res.msg;
                                 this.unCompletedVideosLists[index].NfoStatus = 0;
                                 this.unCompletedVideosLists[index].PosterStatus = 0;
-                                console.log(res);
                             } else {
                                 console.log("刮削电视剧失败: " + res.msg);
                             }
                         });
+                },
+
+                GetVersion() {
+                    fetch(this.apiAddr + "/api/version", this.requestOptions)
+                    .then((res) => res.json())
+                    .then((res) => {
+                        if (res.success) {
+                            console.log("服务端版本号: " + res.version);
+                            this.serverVersion = res.version;
+                        } else {
+                            console.log("获取服务端版本号失败: " + res.msg);
+                        }
+                    });
                 }
             }
         });

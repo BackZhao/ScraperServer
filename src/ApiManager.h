@@ -108,6 +108,8 @@ public:
      */
     void InterLog(const Poco::JSON::Object &param, std::ostream &out);
 
+    void Version(const Poco::JSON::Object &param, std::ostream &out);
+
 private:
 
     ApiManager()

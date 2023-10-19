@@ -4,6 +4,8 @@
 
 #include <Poco/DateTimeFormatter.h>
 
+#include <version.h>
+
 #include "DataConvert.h"
 #include "Logger.h"
 #include "TMDBAPI.h"
@@ -504,5 +506,13 @@ void ApiManager::InterLog(const Poco::JSON::Object&, std::ostream& out)
     Poco::JSON::Object jsonObj;
     jsonObj.set("success", true);
     jsonObj.set("interlog", Logger::Instance().GetInterLog());
+    jsonObj.stringify(out);
+}
+
+void ApiManager::Version(const Poco::JSON::Object &, std::ostream &out)
+{
+    Poco::JSON::Object jsonObj;
+    jsonObj.set("success", true);
+    jsonObj.set("version", VERSION);
     jsonObj.stringify(out);
 }
