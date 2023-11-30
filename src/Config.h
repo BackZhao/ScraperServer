@@ -10,24 +10,13 @@
 #include "CommonType.h"
 
 /**
- * @brief 与HTTP相关的配置项
+ * @brief 与网络相关的配置项
  *
  */
-struct HttpConf {
-    uint16_t port; // HTTP服务器监听的端口号
-};
-
-/**
- * @brief 跟监管程序相关的配置
- *
- */
-struct ProgConf {
-    std::string name;     // 显示名称
-    std::string cmd;      // 启动命令, 含命令行参数
-    bool        enable;   // 是否启用
-    int         retry;    // 重新拉起的尝试次数, -1代表不限次数
-    uint32_t    interval; // 重新拉起的间隔
-    int         watchdog; // 喂狗超时时间
+struct NetworkConf {
+    uint16_t    listenPort; // HTTP服务器监听的端口号
+    std::string httpProxyHost;  // HTTP代理的主机名
+    uint16_t    httpProxyPort;  // HTTP代理的端口号
 };
 
 /**
@@ -72,7 +61,7 @@ struct DataSourceConf {
  *
  */
 struct AppConf {
-    HttpConf       httpConf;
+    NetworkConf    networkConf;
     int            logLevel;
     std::string    logFile;
     ApiConf        apiConf;
@@ -149,6 +138,20 @@ public:
     uint16_t GetPort();
 
     /**
+     * @brief 获取配置中的HTTP代理主机
+     *
+     * @return std::string HTTP代理主机
+     */
+    std::string GetHttpProxyHost();
+
+    /**
+     * @brief 获取配置中的HTTP代理端口号
+     *
+     * @return uint16_t HTTP代理端口号
+     */
+    uint16_t GetHttpProxyPort();
+
+    /**
      * @brief 获取日志等级
      *
      * @return int 日志等级
@@ -204,7 +207,7 @@ private:
     Config()
     {
         m_appConf.isAuto                  = false;
-        m_appConf.httpConf.port           = 0;
+        m_appConf.networkConf.listenPort  = 0;
         m_appConf.logLevel                = 2; // spdlog::level::info
         m_appConf.apiConf.downloadTimeout = 15;
         m_appConf.apiConf.jsonTimeout     = 5;

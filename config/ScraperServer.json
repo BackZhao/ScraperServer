@@ -2,6 +2,13 @@
     "Port": 54250,
     "LogLevel": "info",
     "AutoInterval": 300,
+    "Network": {
+        "ListenPort": 54250,
+        "HttpProxy": {
+            "Host": "127.0.0.1",
+            "Port": 8118
+        }
+    },
     "API": {
         "APIKey": "TMDB-API-KEY",
         "URLs": {
@@ -12,7 +19,10 @@
             "GetTVCredits": "http://api.themoviedb.org/3/tv/{tv_id}/credits",
             "GetTVDetail": "http://api.themoviedb.org/3/tv/",
             "GetSeasonDetail": "http://api.themoviedb.org/3/tv/{tv_id}/season/",
-            "ImageDownload": "http://image.tmdb.org/t/p/"
+            "ImageDownload": "http://image.tmdb.org/t/p/",
+            "GetMovieImages": "http://api.themoviedb.org/3/movie/{movie_id}/images",
+            "GetTVImages": "http://api.themoviedb.org/3/tv/{series_id}/images",
+            "GetSeasonImages": "http://api.themoviedb.org/3/tv/{series_id}/season/{season_number}/images"
         },
         "Timeout": {
             "Download": 15,
@@ -29,7 +39,8 @@
             "/data/Movies"
         ],
         "TVs": [
-            "/data/TVs"
+            "/data/TVs",
+            "/data/Bangumi"
         ]
     }
 }

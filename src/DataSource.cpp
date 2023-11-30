@@ -281,7 +281,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
 
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
-        Poco::SortedDirectoryIterator iter(moviePath);
+        Poco::SortedDirectoryIterator iter(moviePath); // TODO: 没有处理路径不存在的问题
         Poco::SortedDirectoryIterator end;
         while (iter != end && !m_isCancel) {
             LOG_TRACE("Scanning file/directory {} ...", iter->path());

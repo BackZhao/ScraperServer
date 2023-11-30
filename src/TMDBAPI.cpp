@@ -42,6 +42,9 @@ bool TMDBAPI::SendRequest(std::ostream& out, Poco::URI& uri)
     request.setMethod(Poco::Net::HTTPRequest::HTTP_GET);
     request.setURI(path);
     request.setVersion(Poco::Net::HTTPMessage::HTTP_1_1);
+    if (!Config::Instance().GetHttpProxyHost().empty()) {
+        session.setProxy(Config::Instance().GetHttpProxyHost(), Config::Instance().GetHttpProxyPort());
+    }
 
     try {
         session.sendRequest(request);

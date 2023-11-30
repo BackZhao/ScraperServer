@@ -41,7 +41,7 @@ void Config::GetConfFile()
 
 void Config::SetPort(uint16_t portNum)
 {
-    m_appConf.httpConf.port = portNum;
+    m_appConf.networkConf.listenPort = portNum;
 }
 
 void Config::SetConfFile(const std::string& confFile)
@@ -73,7 +73,17 @@ void Config::SetLogFile(const std::string& logLevel)
 
 uint16_t Config::GetPort()
 {
-    return m_appConf.httpConf.port;
+    return m_appConf.networkConf.listenPort;
+}
+
+std::string Config::GetHttpProxyHost()
+{
+    return m_appConf.networkConf.httpProxyHost;
+}
+
+uint16_t Config::GetHttpProxyPort()
+{
+    return m_appConf.networkConf.httpProxyPort;
 }
 
 int Config::GetLogLevel()
@@ -143,12 +153,6 @@ bool Config::ParseConfFile()
         auto                    result  = jsonParser.parse(istr);
         Poco::JSON::Object::Ptr jsonPtr = result.extract<Poco::JSON::Object::Ptr>();
 
-        if (m_appConf.httpConf.port != 0) {
-            std::cout << "HTTP listen port is specified by cli, ignore value in config file." << std::endl;
-        } else {
-            m_appConf.httpConf.port = jsonPtr->optValue<uint16_t>("Port", DEFAULT_HTTP_SERVER_PORT);
-        }
-
         // TODO: 减少代码重复率
         auto ParseLogLevel = [&](const std::string& levelStr) {
             // 全转大写
@@ -179,6 +183,17 @@ bool Config::ParseConfFile()
 
         auto apiConfJson         = jsonPtr->getObject("API");
         m_appConf.apiConf.apiKey = apiConfJson->getValue<std::string>("APIKey");
+
+        auto networkConfJson = jsonPtr->getObject("Network");
+        if (m_appConf.networkConf.listenPort != 0) {
+            std::cout << "HTTP listen port is specified by cli, ignore value in config file." << std::endl;
+        } else {
+            m_appConf.networkConf.listenPort =
+                networkConfJson->optValue<uint16_t>("ListenPort", DEFAULT_HTTP_SERVER_PORT);
+        }
+        auto httpProxyJson = networkConfJson->getObject("HttpProxy");
+        m_appConf.networkConf.httpProxyHost = httpProxyJson->getValue<std::string>("Host");
+        m_appConf.networkConf.httpProxyPort = httpProxyJson->getValue<uint16_t>("Port");
 
         auto apiUrlsJson                             = apiConfJson->getObject("URLs");
         m_appConf.apiConf.apiUrls[SEARCH_MOVIE]      = apiUrlsJson->getValue<std::string>("SearchMovie");
@@ -220,7 +235,7 @@ void Config::SaveToFile()
     std::lock_guard<std::mutex> locker(m_writeLock);
 
     Poco::JSON::Object jsonObj;
-    jsonObj.set("port", m_appConf.httpConf.port);
+    jsonObj.set("port", m_appConf.networkConf.listenPort);
 
     std::ofstream ofs(m_confFile);
     try {
