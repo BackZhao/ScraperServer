@@ -14,7 +14,7 @@
 #include <map>
 #include <string>
 
-const std::map<std::string, std::string> CODE_TO_STR = {
+const std::map<std::string, std::string> ISO_3611_CODE_TO_STR = {
     {"AD", "安道尔"},
     {"AE", "阿联酋"},
     {"AF", "阿富汗"},

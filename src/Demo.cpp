@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 
     // VideoInfo videoInfo(MOVIE, "/data/Movies/Now.You.See.Me.2013.Extended.1080p.BluRay.DTS.x264-NiP.mkv");
     // videoInfo.nfoPath   = "/data/Movies/Now.You.See.Me.2013.Extended.1080p.BluRay.DTS.x264-NiP.nfo";
-    // videoInfo.nfoStatus = NFO_FORMAT_MATCH;
+    // videoInfo.nfoStatus = FILE_FORMAT_MATCH;
     // ParseNfoToVideoInfo(videoInfo);
     // VideoInfoToNfo(videoInfo, "/home/bkzhao/Demo.nfo");
     // return 0;

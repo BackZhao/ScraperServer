@@ -409,7 +409,7 @@ void ApiManager::RefreshMovie()
     int nfoMisCount = 0;
 
     for (auto &videoInfo : m_videoInfos.at(MOVIE)) {
-        if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+        if (videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
             LOG_DEBUG("Nfo file incorrect, skipped: {}", videoInfo.videoPath);
             nfoMisCount++;
             nfoMisVec.push_back(videoInfo.videoPath);
@@ -460,7 +460,7 @@ void ApiManager::RefreshTV()
     int                      nfoMisCount  = 0;
 
     for (auto &videoInfo : m_videoInfos.at(TV)) {
-        if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+        if (videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
             LOG_DEBUG("Nfo file incorrect, skipped: {}", videoInfo.videoPath);
             nfoMisCount++;
             nfoMisVec.push_back(videoInfo.videoPath);

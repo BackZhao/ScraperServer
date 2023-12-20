@@ -12,3 +12,13 @@ void FillWithResponseJson(std::ostream &out, bool isSuccess, const std::string &
 
     jsonObj.stringify(out);
 }
+
+std::size_t ReplaceString(std::string& inout, const std::string& what, const std::string& with)
+{
+    std::size_t count{};
+    for (std::string::size_type pos{}; inout.npos != (pos = inout.find(what.data(), pos, what.length()));
+         pos += with.length(), ++count) {
+        inout.replace(pos, what.length(), with.data(), with.length());
+    }
+    return count;
+}

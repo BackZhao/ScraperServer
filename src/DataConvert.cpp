@@ -15,7 +15,6 @@
 
 #include "Config.h"
 #include "Logger.h"
-#include "ISO-3611-1.h"
 
 using Poco::AutoPtr;
 using namespace Poco::XML;
@@ -57,7 +56,7 @@ void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Object& outJson)
     }
 
     // 如果NFO文件格式匹配, 则额外填写NFO的信息
-    if (videoInfo.nfoStatus == NFO_FORMAT_MATCH) {
+    if (videoInfo.nfoStatus == FILE_FORMAT_MATCH) {
         videoDetailJson.set("Title", videoInfo.videoDetail.title);
         videoDetailJson.set("OriginalTitle", videoInfo.videoDetail.originaltitle);
 
@@ -257,7 +256,7 @@ std::string GetNodeValByPath(Node* parentNode, const std::string& nodePath, std:
 bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
 {
     // NFO文件的状态必须是格式匹配的
-    if (videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+    if (videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
         LOG_ERROR("Nfo format mismatch: {}", videoInfo.nfoPath);
         return false;
     }
@@ -317,176 +316,6 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
             GetNodeValByPath<std::string>(actorNode, "/thumb"),
         };
         videoInfo.videoDetail.actors.push_back(actor);
-    }
-
-    return true;
-}
-
-bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
-{
-    Object::Ptr jsonPtr = nullptr;
-    try {
-        Parser parser;
-        auto   result = parser.parse(sS);
-        jsonPtr       = result.extract<Object::Ptr>();
-    } catch (Poco::Exception& e) {
-        LOG_ERROR("Movie detail json parse failed, text as fllows: ");
-        std::cout << sS.str() << std::endl;
-    }
-
-    videoDetail.title          = jsonPtr->getValue<std::string>("title");
-    videoDetail.originaltitle  = jsonPtr->getValue<std::string>("original_title");
-    videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
-    videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
-    videoDetail.plot           = jsonPtr->getValue<std::string>("overview");
-
-    if (!jsonPtr->getValue<std::string>("poster_path").empty()) {
-        const std::string imageUrl =
-            Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
-        videoDetail.posterUrl = imageUrl + jsonPtr->getValue<std::string>("poster_path");
-    }
-
-    auto genreJsonPtr = jsonPtr->getArray("genres");
-    for (std::size_t i = 0; i < genreJsonPtr->size(); i++) {
-        videoDetail.genre.push_back(genreJsonPtr->getObject(i)->getValue<std::string>("name"));
-    }
-
-    auto contriesJsonPtr = jsonPtr->getArray("production_countries");
-    for (std::size_t i = 0; i < contriesJsonPtr->size(); i++) {
-        const std::string& code = contriesJsonPtr->getObject(i)->getValue<std::string>("iso_3166_1");
-        videoDetail.countries.push_back(CODE_TO_STR.at(code));
-    }
-
-    videoDetail.premiered = jsonPtr->getValue<std::string>("release_date");
-
-    auto studioJsonArrPtr = jsonPtr->getArray("production_companies");
-    for (std::size_t i = 0; i < studioJsonArrPtr->size(); i++) {
-        videoDetail.studio.push_back(studioJsonArrPtr->getObject(i)->getValue<std::string>("name"));
-    }
-
-    return true;
-}
-
-bool ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail, int seasonId)
-{
-    Object::Ptr jsonPtr = nullptr;
-    try {
-        Parser parser;
-        auto   result = parser.parse(sS);
-        jsonPtr       = result.extract<Object::Ptr>();
-    } catch (Poco::Exception& e) {
-        LOG_ERROR("TV detail json parse failed, text as fllows: ");
-        std::cout << sS.str() << std::endl;
-        return false;
-    }
-
-    // 获取指定的季
-    Object::Ptr selectedSeason = nullptr;
-    auto seasonArr = jsonPtr->getArray("seasons");
-    for (size_t i = 0; i < seasonArr->size(); i++) {
-        auto season = seasonArr->getObject(i);
-        if (season->getValue<int>("season_number") == seasonId) {
-            selectedSeason = season;
-            break;
-        } 
-    }
-    if (selectedSeason == nullptr) {
-        LOG_ERROR("Could not found given season id!");
-        return false;
-    }
-    static std::set<std::string> seasonOne = {
-        "第一部", "第1部", "第 1 部",
-        "第一季", "第1季", "第 1 季",
-        "SEASON ONE", "SEASON1", "SEASON 1",
-    };
-    auto iter = seasonOne.find(selectedSeason->getValue<std::string>("name"));
-    if ( iter != seasonOne.end() || seasonId == 1 ) { // 第一部不加序号
-        videoDetail.title = jsonPtr->getValue<std::string>("name");
-    } else {
-        videoDetail.title = jsonPtr->getValue<std::string>("name") + std::to_string(seasonId);
-    }
-
-    const std::string imageUrl =
-        Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
-    if (selectedSeason->isNull("poster_path")) {
-        if (!jsonPtr->getValue<std::string>("poster_path").empty()) {
-            videoDetail.posterUrl = imageUrl + jsonPtr->getValue<std::string>("poster_path");
-        }
-    } else {
-        videoDetail.posterUrl = imageUrl + selectedSeason->getValue<std::string>("poster_path");
-    }
-
-    if (selectedSeason->getValue<std::string>("overview").empty()) {
-        videoDetail.plot = jsonPtr->getValue<std::string>("overview");
-    } else {
-        videoDetail.plot = selectedSeason->getValue<std::string>("overview");
-    }
-
-    videoDetail.originaltitle  = jsonPtr->getValue<std::string>("original_name");
-    videoDetail.ratings.rating = jsonPtr->getValue<double>("vote_average");
-    videoDetail.ratings.votes  = jsonPtr->getValue<int>("vote_count");
-
-    auto genreJsonPtr = jsonPtr->getArray("genres");
-    for (std::size_t i = 0; i < genreJsonPtr->size(); i++) {
-        videoDetail.genre.push_back(genreJsonPtr->getObject(i)->getValue<std::string>("name"));
-    }
-
-    auto contriesJsonPtr = jsonPtr->getArray("production_countries");
-    for (std::size_t i = 0; i < contriesJsonPtr->size(); i++) {
-        const std::string& code = contriesJsonPtr->getObject(i)->getValue<std::string>("iso_3166_1");
-        videoDetail.countries.push_back(CODE_TO_STR.at(code));
-    }
-
-    videoDetail.premiered = jsonPtr->getValue<std::string>("first_air_date");
-
-    auto studioJsonArrPtr = jsonPtr->getArray("production_companies");
-    for (std::size_t i = 0; i < studioJsonArrPtr->size(); i++) {
-        videoDetail.studio.push_back(studioJsonArrPtr->getObject(i)->getValue<std::string>("name"));
-    }
-
-    return true;
-}
-
-bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail)
-{
-    Object::Ptr jsonPtr = nullptr;
-    try {
-        Parser parser;
-        auto   result = parser.parse(sS);
-        jsonPtr       = result.extract<Object::Ptr>();
-    } catch (Poco::Exception& e) {
-        LOG_ERROR("Credits json parse failed, text as fllows: ");
-        std::cout << sS.str() << std::endl;
-    }
-
-    const std::string imageUrl =
-        Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
-
-    auto castJsonArrPtr = jsonPtr->getArray("cast");
-    for (std::size_t i = 0; i < castJsonArrPtr->size(); i++) {
-        auto              castJsonObjPtr = castJsonArrPtr->getObject(i);
-        const std::string department     = castJsonObjPtr->getValue<std::string>("known_for_department");
-        if (department == "Acting") {
-            ActorDetail actor = {
-                castJsonObjPtr->getValue<std::string>("name"),
-                castJsonObjPtr->getValue<std::string>("character"),
-                castJsonObjPtr->getValue<int>("order"),
-                castJsonObjPtr->isNull("profile_path")
-                    ? ""
-                    : imageUrl + castJsonObjPtr->getValue<std::string>("profile_path"),
-            };
-            videoDetail.actors.push_back(actor);
-        }
-    }
-
-    auto crewJsonArrPtr = jsonPtr->getArray("crew");
-    for (std::size_t i = 0; i < crewJsonArrPtr->size(); i++) {
-        auto crewJsonObjPtr = crewJsonArrPtr->getObject(i);
-        if (crewJsonObjPtr->optValue<std::string>("job", "") == "Writer") {
-            videoDetail.credits.push_back(crewJsonObjPtr->getValue<std::string>("name"));
-        } else if (crewJsonObjPtr->optValue<std::string>("job", "") == "Director") {
-            videoDetail.director = crewJsonObjPtr->getValue<std::string>("name");
-        }
     }
 
     return true;

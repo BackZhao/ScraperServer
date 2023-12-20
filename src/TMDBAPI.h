@@ -23,31 +23,43 @@ class TMDBAPI : public AbstractAPI
 
 public:
 
-    virtual bool ScrapeMovie(VideoInfo& videoInfo, int movieID);
+    bool ScrapeMovie(VideoInfo& videoInfo, int movieID) override;
 
-    virtual bool ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId);
+    bool ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId) override;
 
     bool UpdateTV(VideoInfo& videoInfo);
 
-    virtual int GetLastErrCode();
+    int GetLastErrCode() override;
 
-    virtual const std::string& GetLastErrStr();
+    const std::string& GetLastErrStr() override;
 
 private:
 
-    bool SendRequest(std::ostream& out, Poco::URI& uri);
+    bool IsImagesAllFilled(const VideoDetail& videoDetail);
 
-    bool GetMovieDetail(std::ostream& out, int tmdbid);
+    bool SendRequest(std::ostream& out, const Poco::URI& uri);
 
-    bool GetTVDetail(std::ostream& out, int tmdbid);
+    bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
 
-    bool GetSeasonDetail(std::ostream& out, int tmdbId, int seasonNum);
+    bool ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail, int seasonId);
 
-    bool GetMovieCredits(std::ostream& out, int tmdbId);
+    bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
 
-    bool GetTVCredits(std::ostream& out, int tmdbId);
+    bool ParseImagesToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
 
-    bool DownloadPoster(VideoInfo& videoInfo);
+    bool GetMovieDetail(int tmdbid, VideoDetail& videoDetail);
+
+    bool GetTVDetail(int tmdbId, int seasonId, VideoDetail& videoDetail);
+
+    bool GetSeasonDetail(int tmdbId, int seasonNum, VideoDetail& videoDetail);
+
+    bool GetMovieCredits(int tmdbId, VideoDetail& videoDetail);
+
+    bool GetTVCredits(int tmdbId, VideoDetail& videoDetail);
+
+    bool GetMovieImages(VideoInfo& videoInfo);
+
+    bool DownloadImages(VideoInfo& videoInfo);
 
 private:
 

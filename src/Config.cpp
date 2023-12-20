@@ -200,6 +200,7 @@ bool Config::ParseConfFile()
         m_appConf.apiConf.apiUrls[SEARCH_TV]         = apiUrlsJson->getValue<std::string>("SearchTV");
         m_appConf.apiConf.apiUrls[GET_MOVIE_CREDITS] = apiUrlsJson->getValue<std::string>("GetMovieCredits");
         m_appConf.apiConf.apiUrls[GET_MOVIE_DETAIL]  = apiUrlsJson->getValue<std::string>("GetMovieDetail");
+        m_appConf.apiConf.apiUrls[GET_MOVIE_IMAGES]  = apiUrlsJson->getValue<std::string>("GetMovieImages");
         m_appConf.apiConf.apiUrls[GET_TV_CREDITS]    = apiUrlsJson->getValue<std::string>("GetTVCredits");
         m_appConf.apiConf.apiUrls[GET_TV_DETAIL]     = apiUrlsJson->getValue<std::string>("GetTVDetail");
         m_appConf.apiConf.apiUrls[GET_SEASON_DETAIL] = apiUrlsJson->getValue<std::string>("GetSeasonDetail");

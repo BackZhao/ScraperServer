@@ -29,11 +29,6 @@ bool VideoInfoToNfo(const VideoInfo& videoInfo, const std::string& nfoPath, bool
  */
 bool ParseNfoToVideoInfo(VideoInfo& videoInfo);
 
-bool ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
-bool ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail, int seasonId);
-
-bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
-
 /**
  * @brief 
  * 
@@ -44,4 +39,3 @@ bool ParseCreditsToVideoDetail(std::stringstream& sS, VideoDetail& videoDetail);
 bool WriteEpisodeNfo(const Poco::JSON::Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths, int seasonId);
 
 bool SetTVEnded(const std::string& nfoPath);
-

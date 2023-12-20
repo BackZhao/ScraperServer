@@ -7,7 +7,7 @@
 #include <set>
 #include <string>
 
-#include <MediaInfoDLL/MediaInfoDLL.h>
+// #include <MediaInfoDLL/MediaInfoDLL.h>
 #include <Poco/AutoPtr.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
@@ -91,64 +91,65 @@ bool DataSource::IsJpgCompleted(const std::string& posterName)
 
 void GetHdrFormat(VideoInfo& videoInfo)
 {
-    using namespace MediaInfoDLL;
+    // using namespace MediaInfoDLL;
 
-    MediaInfo mi;
-    std::setlocale(LC_ALL, "en_US.utf8");
+    // MediaInfo mi;
+    // std::setlocale(LC_ALL, "en_US.utf8");
 
-    switch (videoInfo.videoType) {
-        case MOVIE: {
-            if (mi.Open(videoInfo.videoPath) <= 0) {
-                LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
-                videoInfo.hdrType = NON_HDR;
-                return;
-            }
-            break;
-        }
-        case TV: {
-            if (videoInfo.videoDetail.episodePaths.size() > 0) {
-                // 以第一集的HDR类型填写
-                if (mi.Open(videoInfo.videoDetail.episodePaths.at(0)) <= 0) {
-                    LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
-                    videoInfo.hdrType = NON_HDR;
-                    return;
-                }
-            } else {
-                LOG_ERROR("No eposide found! path: {}", videoInfo.videoPath);
-                videoInfo.hdrType = NON_HDR;
-            }
-            break;
-        }
-        default:
-            break;
-    }
+    // switch (videoInfo.videoType) {
+    //     case MOVIE: {
+    //         if (mi.Open(videoInfo.videoPath) <= 0) {
+    //             LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+    //             videoInfo.hdrType = NON_HDR;
+    //             return;
+    //         }
+    //         break;
+    //     }
+    //     case TV: {
+    //         if (videoInfo.videoDetail.episodePaths.size() > 0) {
+    //             // 以第一集的HDR类型填写
+    //             if (mi.Open(videoInfo.videoDetail.episodePaths.at(0)) <= 0) {
+    //                 LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
+    //                 videoInfo.hdrType = NON_HDR;
+    //                 return;
+    //             }
+    //         } else {
+    //             LOG_ERROR("No eposide found! path: {}", videoInfo.videoPath);
+    //             videoInfo.hdrType = NON_HDR;
+    //         }
+    //         break;
+    //     }
+    //     default:
+    //         break;
+    // }
 
-    if (mi.Count_Get(Stream_Video) < 1) {
-        LOG_ERROR("Video stream not found with MediaInfoLib, set as NON-HDR! path: {}", videoInfo.videoPath);
-        return;
-    }
+    // if (mi.Count_Get(Stream_Video) < 1) {
+    //     LOG_ERROR("Video stream not found with MediaInfoLib, set as NON-HDR! path: {}", videoInfo.videoPath);
+    //     return;
+    // }
 
-    std::string hdrFormat = mi.Get(Stream_Video, 0, "HDR_Format_Commercial");
+    // std::string hdrFormat = mi.Get(Stream_Video, 0, "HDR_Format_Commercial");
 
-    // mediainfo打印的HDR_Format_Commercial可能结果
-    static const std::string DV_FORMAT           = "Dolby Vision";   // DV
-    static const std::string HDR10_FORMAT        = "HDR10";          // HDR10
-    static const std::string HDR10Plus_FORMAT    = "HDR10+";         // HDR10
-    static const std::string DV_AND_HDR10_FORMAT = "HDR10 / HDR10+"; // DV + HDR10
+    // // mediainfo打印的HDR_Format_Commercial可能结果
+    // static const std::string DV_FORMAT           = "Dolby Vision";   // DV
+    // static const std::string HDR10_FORMAT        = "HDR10";          // HDR10
+    // static const std::string HDR10Plus_FORMAT    = "HDR10+";         // HDR10
+    // static const std::string DV_AND_HDR10_FORMAT = "HDR10 / HDR10+"; // DV + HDR10
 
-    if (hdrFormat == DV_AND_HDR10_FORMAT) {
-        videoInfo.hdrType = DOLBY_VISION_AND_HDR10;
-    } else if (hdrFormat == DV_FORMAT) {
-        videoInfo.hdrType = DOLBY_VISION;
-    } else if (hdrFormat == HDR10_FORMAT) {
-        videoInfo.hdrType = HDR10;
-    } else if (hdrFormat == HDR10Plus_FORMAT) {
-        videoInfo.hdrType = HDR10Plus;
-    } else {
-        videoInfo.hdrType = NON_HDR;
-    }
+    // if (hdrFormat == DV_AND_HDR10_FORMAT) {
+    //     videoInfo.hdrType = DOLBY_VISION_AND_HDR10;
+    // } else if (hdrFormat == DV_FORMAT) {
+    //     videoInfo.hdrType = DOLBY_VISION;
+    // } else if (hdrFormat == HDR10_FORMAT) {
+    //     videoInfo.hdrType = HDR10;
+    // } else if (hdrFormat == HDR10Plus_FORMAT) {
+    //     videoInfo.hdrType = HDR10Plus;
+    // } else {
+    //     videoInfo.hdrType = NON_HDR;
+    // }
 
-    LOG_DEBUG("HDR type(parsed): {}, HDR format(MediaInfoLib): {}, path: {}", videoInfo.hdrType, hdrFormat, videoInfo.videoPath);
+    // LOG_DEBUG("HDR type(parsed): {}, HDR format(MediaInfoLib): {}, path: {}", videoInfo.hdrType, hdrFormat, videoInfo.videoPath);
+    videoInfo.hdrType = NON_HDR;
 }
 
 // TODO: 检查是否有多个匹配的海报和nfo文件(依据Kodi的wiki说明)
@@ -157,20 +158,20 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
     // 检查NFO文件是否存在
     auto CheckNfo = [&](const std::string& nfoName) {
         if (Poco::File(nfoName).exists()) {
-            videoInfo.nfoStatus = IsNfoFormatMatch(nfoName) == true ? NFO_FORMAT_MATCH : NFO_FORMAT_MISMATCH;
+            videoInfo.nfoStatus = IsNfoFormatMatch(nfoName) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
             videoInfo.nfoPath   = nfoName;
             ParseNfoToVideoInfo(videoInfo);
         } else {
-            videoInfo.nfoStatus = NFO_NOT_FOUND;
+            videoInfo.nfoStatus = FILE_NOT_FOUND;
         }
     };
 
     auto CheckPoster = [&](const std::string& posterName) {
         if (Poco::File(posterName).exists()) {
-            videoInfo.posterStatus = IsJpgCompleted(posterName) == true ? POSTER_COMPELETED : POSTER_INCOMPELETED;
+            videoInfo.posterStatus = IsJpgCompleted(posterName) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
             videoInfo.posterPath   = posterName;
         } else {
-            videoInfo.posterStatus = POSTER_NOT_FOUND;
+            videoInfo.posterStatus = FILE_NOT_FOUND;
         }
     };
 
@@ -191,9 +192,11 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
                 Poco::Path(videoInfo.videoPath).parent().toString() + Poco::Path(videoInfo.videoPath).getBaseName();
             videoInfo.nfoPath = baseNameWithDir + ".nfo";
             videoInfo.posterPath = baseNameWithDir + "-poster.jpg";
+            videoInfo.fanartPath = baseNameWithDir + "-fanart.jpg";
+            videoInfo.clearlogoPath = baseNameWithDir + "-clearlogo.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
-            if (forceDetectHdr || videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+            if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
                 GetHdrFormat(videoInfo);
             } else {
                 videoInfo.hdrType = NON_HDR;
@@ -206,10 +209,12 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             const std::string& dirName = videoInfo.videoPath + Poco::Path::separator();
             videoInfo.nfoPath          = dirName + "tvshow.nfo";
             videoInfo.posterPath       = dirName + "poster.jpg";
+            videoInfo.fanartPath       = dirName + "fanart.jpg";
+            videoInfo.clearlogoPath    = dirName + "clearlogo.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
             CheckEpisodes();
-            if (forceDetectHdr || videoInfo.nfoStatus != NFO_FORMAT_MATCH) {
+            if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
                 GetHdrFormat(videoInfo);
             } else {
                 videoInfo.hdrType = NON_HDR;
@@ -230,7 +235,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
 bool DataSource::IsMetaCompleted(const VideoInfo& videoInfo)
 {
     // NFO文件和海报任意一个不完整, 即视为不完整
-    if (videoInfo.nfoStatus != NFO_FORMAT_MATCH || videoInfo.posterStatus != POSTER_COMPELETED) {
+    if (videoInfo.nfoStatus != FILE_FORMAT_MATCH || videoInfo.posterStatus != FILE_FORMAT_MATCH) {
         return false;
     }
 

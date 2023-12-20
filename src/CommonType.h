@@ -18,23 +18,13 @@ enum VideoType {
 };
 
 /**
- * @brief NFO文件状态
- *
+ * @brief 元数据文件的状态(图片, NFO文件等)
+ * 
  */
-enum NfoStatus {
-    NFO_FORMAT_MATCH,    // NFO文件格式匹配(KODI格式)
-    NFO_FORMAT_MISMATCH, // NFO文件格式不匹配(KODI格式)
-    NFO_NOT_FOUND,       // NFO文件不存在
-};
-
-/**
- * @brief 海报文件状态
- *
- */
-enum PosterStatus {
-    POSTER_COMPELETED,   // 海报文件完整(JPEG格式)
-    POSTER_INCOMPELETED, // 海报文件不完整(JPEG格式)
-    POSTER_NOT_FOUND,    // 海报文件不存在
+enum MetaFileStatus {
+    FILE_FORMAT_MATCH,    // 文件格式匹配
+    FILE_FORMAT_MISMATCH, // 文件格式不匹配
+    FILE_NOT_FOUND,       // 文件不存在
 };
 
 /**
@@ -59,18 +49,6 @@ static std::map<VideoType, std::string> VIDEO_TYPE_TO_STR = {
     {MOVIE, "movie"},
     {TV, "tv"},
     {MOVIE_SET, "movieSet"},
-};
-
-static std::map<NfoStatus, std::string> NFO_STATUS_TO_STR = {
-    {NFO_FORMAT_MATCH, "Nfo format match"},
-    {NFO_FORMAT_MISMATCH, "Nfo format mismatch"},
-    {NFO_NOT_FOUND, "Nfo not found"},
-};
-
-static std::map<PosterStatus, std::string> POSTER_STATUS_TO_STR = {
-    {POSTER_COMPELETED, "Poster completed"},
-    {POSTER_INCOMPELETED, "Poster incompleted"},
-    {POSTER_NOT_FOUND, "Poster not found"},
 };
 
 /**
@@ -116,7 +94,6 @@ struct SeasonDetail {
     int                        episodeCount; // 季的电视剧总数
     int                        seasonNumber; // 季的编号
     std::string                posterPath; // 季的海报图片地址(短地址, 仅包含服务器上的文件名称)
-    std::vector<uint8_t>       posterData;  // 季的海报图片二进制数据
     std::vector<EpisodeDetail> episodeDetails; // 季的所有电视剧详情
 };
 
@@ -127,18 +104,18 @@ struct SeasonDetail {
 struct VideoDetail {
     VideoDetail() : episodeNfoCount(0) {}
 
-    std::string              title;         // 视频的标题
-    std::string              originaltitle; // 视频的原始标题
-    RatingDetail             ratings;       // 视频的用户评分
-    std::string              plot;          // 视频的剧情介绍
+    std::string                title;         // 视频的标题
+    std::string                originaltitle; // 视频的原始标题
+    RatingDetail               ratings;       // 视频的用户评分
+    std::string                plot;          // 视频的剧情介绍
     std::map<std::string, int> uniqueid;      // 不同API类型下, 视频的唯一ID
-    std::vector<std::string> genre;         // 视频的分类
-    std::vector<std::string> countries;     // 视频的国家
-    std::vector<std::string> credits;       // 视频的编剧
-    std::string              director;      // 视频的导演
-    std::string              premiered;     // 视频的首播日期
-    std::vector<std::string> studio;        // 视频的制片厂
-    std::vector<ActorDetail> actors;        // 视频的演员信息
+    std::vector<std::string>   genre;         // 视频的分类
+    std::vector<std::string>   countries;     // 视频的国家
+    std::vector<std::string>   credits;       // 视频的编剧
+    std::string                director;      // 视频的导演
+    std::string                premiered;     // 视频的首播日期
+    std::vector<std::string>   studio;        // 视频的制片厂
+    std::vector<ActorDetail>   actors;        // 视频的演员信息
 
     // 电视剧专属
     int                      seasonNumber;    // 季编号
@@ -146,7 +123,9 @@ struct VideoDetail {
     std::vector<std::string> episodePaths;    // 电视剧剧集路径
     bool                     isEnded;         // 是否已完结
 
-    std::string posterUrl; // 视频的海报图片地址(短地址, 仅包含服务器上的文件名称)
+    std::string posterUrl;    // 视频的海报图片地址(短地址, 仅包含服务器上的文件名称)
+    std::string fanartUrl;    // 剧照的图片地址(短地址, 仅包含服务器上的文件名称)
+    std::string clearLogoUrl; // 标志的图片地址(短地址, 仅包含服务器上的文件名称)
 };
 
 /**
@@ -156,13 +135,19 @@ struct VideoDetail {
 struct VideoInfo {
     VideoInfo(VideoType type, const std::string& path) : videoType(type), videoPath(path) {}
 
-    VideoType            videoType;
-    std::string          videoPath;
-    HDRType              hdrType;
-    NfoStatus            nfoStatus;    // NFO文件状态
-    PosterStatus         posterStatus; // 海报文件状态
-    std::string          nfoPath;      // NFO文件路径
-    std::string          posterPath;   // 海报路径
-    std::vector<uint8_t> posterData;   // 视频海报的图片二进制数据
-    VideoDetail          videoDetail;
+    VideoType   videoType; // 视频类型
+    std::string videoPath; // 视频所在路径
+    HDRType     hdrType;   // HDR的类型
+
+    MetaFileStatus nfoStatus;       // NFO文件状态
+    MetaFileStatus posterStatus;    // 海报文件状态
+    MetaFileStatus fanartStatus;    // 剧照文件状态
+    MetaFileStatus clearLogoStatus; // 标志文件状态
+
+    std::string nfoPath;       // NFO文件路径
+    std::string posterPath;    // 海报路径
+    std::string fanartPath;    // 剧照路径
+    std::string clearlogoPath; // logo路径
+
+    VideoDetail videoDetail;
 };
