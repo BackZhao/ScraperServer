@@ -66,7 +66,7 @@ void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Object& outJson)
         videoDetailJson.set("Ratings", ratingsJson);
 
         videoDetailJson.set("Plot", videoInfo.videoDetail.plot);
-        videoDetailJson.set("Uniqueid", videoInfo.videoDetail.uniqueid);
+        videoDetailJson.set("Uniqueid", videoInfo.videoDetail.uniqueid.at("tmdb"));
 
         Array genreArrJson;
         for (const auto& genre : videoInfo.videoDetail.genre) {
