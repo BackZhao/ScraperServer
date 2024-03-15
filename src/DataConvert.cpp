@@ -368,7 +368,7 @@ bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>
             createAndAppendText(rootEle, "title", "第" + std::to_string(i + 1) + "集");
 
             createAndAppendText(rootEle, "season", std::to_string(seasonId));
-            createAndAppendText(rootEle, "episode", std::to_string(i));
+            createAndAppendText(rootEle, "episode", std::to_string(i + 1));
             createAndAppendText(rootEle, "plot", "");
         }
         // TODO: 添加更多详细标签
