@@ -39,6 +39,15 @@ enum HDRType {
     DOLBY_VISION_AND_HDR10, //杜比视界 + HDR10
 };
 
+/**
+ * @brief 视频文件类型(是否在目录内, 主要针对电影)
+ * 
+ */
+enum VideoFileType {
+    NO_FOLDER, // 没有上层目录
+    IN_FOLDER, // 包含上层目录
+};
+
 static std::map<std::string, VideoType> STR_TO_VIDEO_TYPE = {
     {"movie", MOVIE},
     {"tv", TV},
@@ -135,14 +144,15 @@ struct VideoDetail {
 struct VideoInfo {
     VideoInfo(VideoType type, const std::string& path) : videoType(type), videoPath(path) {}
 
-    VideoType   videoType; // 视频类型
-    std::string videoPath; // 视频所在路径
-    HDRType     hdrType;   // HDR的类型
+    VideoType     videoType; // 视频类型
+    std::string   videoPath; // 视频所在路径
+    HDRType       hdrType;   // HDR的类型
+    VideoFileType videoFiletype;
 
     MetaFileStatus nfoStatus;       // NFO文件状态
     MetaFileStatus posterStatus;    // 海报文件状态
     MetaFileStatus fanartStatus;    // 剧照文件状态
-    MetaFileStatus clearLogoStatus; // 标志文件状态
+    MetaFileStatus clearlogoStatus; // 标志文件状态
 
     std::string nfoPath;       // NFO文件路径
     std::string posterPath;    // 海报路径

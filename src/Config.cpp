@@ -186,7 +186,7 @@ bool Config::ParseConfFile()
 
         auto networkConfJson = jsonPtr->getObject("Network");
         if (m_appConf.networkConf.listenPort != 0) {
-            std::cout << "HTTP listen port is specified by cli, ignore value in config file." << std::endl;
+            LOG_WARN("HTTP listen port is specified by cli, ignore value in config file.");
         } else {
             m_appConf.networkConf.listenPort =
                 networkConfJson->optValue<uint16_t>("ListenPort", DEFAULT_HTTP_SERVER_PORT);
@@ -203,7 +203,9 @@ bool Config::ParseConfFile()
         m_appConf.apiConf.apiUrls[GET_MOVIE_IMAGES]  = apiUrlsJson->getValue<std::string>("GetMovieImages");
         m_appConf.apiConf.apiUrls[GET_TV_CREDITS]    = apiUrlsJson->getValue<std::string>("GetTVCredits");
         m_appConf.apiConf.apiUrls[GET_TV_DETAIL]     = apiUrlsJson->getValue<std::string>("GetTVDetail");
+        m_appConf.apiConf.apiUrls[GET_TV_IMAGES]     = apiUrlsJson->getValue<std::string>("GetTVImages");
         m_appConf.apiConf.apiUrls[GET_SEASON_DETAIL] = apiUrlsJson->getValue<std::string>("GetSeasonDetail");
+        m_appConf.apiConf.apiUrls[GET_SEASON_IMAGES] = apiUrlsJson->getValue<std::string>("GetSeasonImages");
         m_appConf.apiConf.apiUrls[IMAGE_DOWNLOAD]    = apiUrlsJson->getValue<std::string>("ImageDownload");
 
         auto apiTimeoutJson               = apiConfJson->getObject("Timeout");
@@ -223,7 +225,7 @@ bool Config::ParseConfFile()
             m_appConf.dataSourceConf.paths[TV].push_back(pathVar.toString());
         }
     } catch (Poco::Exception& e) {
-        std::cerr << "Config file " << m_confFile << " failed: " << e.displayText() << std::endl;
+        LOG_ERROR("Parse conf file {} failed: {}", m_confFile, e.displayText());
         return false;
     }
 

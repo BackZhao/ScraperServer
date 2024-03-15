@@ -63,22 +63,21 @@ bool TMDBAPI::ParseImagesToVideoDetail(std::stringstream& sS, VideoDetail& video
 
     // 剧照
     auto backdropsJsonPtr = jsonPtr->getArray("backdrops");
-    if (!backdropsJsonPtr->empty()) {
+    if (videoDetail.fanartUrl.empty() && !backdropsJsonPtr.isNull() && !backdropsJsonPtr->empty()) {
         videoDetail.fanartUrl = backdropsJsonPtr->getObject(0)->optValue<std::string>("file_path", "");
     }
 
     // logo
     auto logosJsonPtr = jsonPtr->getArray("logos");
-    if (!logosJsonPtr->empty()) {
+    if (videoDetail.clearLogoUrl.empty() && !logosJsonPtr.isNull() && !logosJsonPtr->empty()) {
         videoDetail.clearLogoUrl = logosJsonPtr->getObject(0)->optValue<std::string>("file_path", "");
     }
 
     // 海报
     auto postersJsonPtr = jsonPtr->getArray("posters");
-    if (!postersJsonPtr->empty()) {
+    if (videoDetail.posterUrl.empty() && !postersJsonPtr.isNull() && !postersJsonPtr->empty()) {
         videoDetail.posterUrl = postersJsonPtr->getObject(0)->optValue<std::string>("file_path", "");
     }
-
 
     return true;
 }
@@ -186,7 +185,6 @@ bool TMDBAPI::ParseMovieDetailsToVideoDetail(std::stringstream& sS, VideoDetail&
 
     return true;
 }
-
 
 bool TMDBAPI::GetMovieDetail(int tmdbId, VideoDetail& videoDetail)
 {
@@ -310,7 +308,7 @@ bool TMDBAPI::GetSeasonDetail(int tmdbId, int seasonId, VideoDetail& videoDetail
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_SEASON_DETAIL);
     if (ReplaceString(uriStr, "{tv_id}", std::to_string(tmdbId)) <= 0) {
-        LOG_ERROR("Invalid api format for geting season detail(need contain {tv_id}): {}", uriStr);
+        LOG_ERROR("Invalid api format for geting season detail(need contain {{tv_id}}): {}", uriStr);
         return false;
     }
 
@@ -399,7 +397,7 @@ bool TMDBAPI::GetMovieCredits(int tmdbId, VideoDetail& videoDetail)
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_MOVIE_CREDITS);
     if (ReplaceString(uriStr, "{movie_id}", std::to_string(tmdbId)) <= 0) {
-        LOG_ERROR("Invalid api format for geting movie credits(need contain {movie_id}): {}", uriStr);
+        LOG_ERROR("Invalid api format for geting movie credits(need contain {{movie_id}}): {}", uriStr);
         return false;
     }
 
@@ -422,7 +420,7 @@ bool TMDBAPI::GetTVCredits(int tmdbId, VideoDetail& videoDetail)
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_TV_CREDITS);
     if (ReplaceString(uriStr, "{tv_id}", std::to_string(tmdbId)) <= 0) {
-        LOG_ERROR("Invalid api format for geting tv credits(need contain {movie_id}): {}", uriStr);
+        LOG_ERROR("Invalid api format for geting tv credits(need contain {{movie_id}}): {}", uriStr);
         return false;
     }
 
@@ -450,7 +448,7 @@ bool TMDBAPI::DownloadImages(VideoInfo& videoInfo)
         const std::string imageUrl =
             Config::Instance().GetApiUrl(IMAGE_DOWNLOAD) + Config::Instance().GetImageDownloadQuality();
         if (uri.empty()) {
-            LOG_ERROR("Image uri for {} is empty!", filePath);
+            LOG_WARN("Image uri for {} is empty!", filePath);
             return false;
         } else {
             LOG_DEBUG("Download poster {} to {}", uri, filePath);
@@ -464,7 +462,7 @@ bool TMDBAPI::DownloadImages(VideoInfo& videoInfo)
     videoInfo.fanartStatus    = DownloadToFile(videoInfo.fanartPath, videoInfo.videoDetail.fanartUrl)
                                     ? FILE_FORMAT_MATCH
                                     : FILE_FORMAT_MISMATCH;
-    videoInfo.clearLogoStatus = DownloadToFile(videoInfo.clearlogoPath, videoInfo.videoDetail.clearLogoUrl)
+    videoInfo.clearlogoStatus = DownloadToFile(videoInfo.clearlogoPath, videoInfo.videoDetail.clearLogoUrl)
                                     ? FILE_FORMAT_MATCH
                                     : FILE_FORMAT_MISMATCH;
 
@@ -477,11 +475,11 @@ bool TMDBAPI::GetMovieImages(VideoInfo& videoInfo)
     // 拼接访问的URL
     std::string uriStr = Config::Instance().GetApiUrl(GET_MOVIE_IMAGES);
     if (ReplaceString(uriStr, "{movie_id}", std::to_string(videoInfo.videoDetail.uniqueid.at("tmdb"))) <= 0) {
-        LOG_ERROR("Invalid api format for geting movie images(need contain {movie_id}): {}", uriStr);
+        LOG_ERROR("Invalid api format for geting movie images(need contain {{movie_id}}): {}", uriStr);
         return false;
     }
 
-    // 依次使用
+    // 依次使用"中文"-"英文"-"无语言"来获取图像
     Poco::URI uriLangZh(uriStr);
     uriLangZh.addQueryParameter("api_key", Config::Instance().GetApiKey());
     uriLangZh.addQueryParameter("include_image_language", "zh");
@@ -505,6 +503,105 @@ bool TMDBAPI::GetMovieImages(VideoInfo& videoInfo)
         uriLangNull.addQueryParameter("api_key", Config::Instance().GetApiKey());
         uriLangNull.addQueryParameter("include_image_language", "null");
         LOG_DEBUG("Get movie images uri(language null) is: {}", uriLangNull.toString());
+
+        SendRequest(sS, uriLangNull);
+        ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
+    }
+
+    return true;
+}
+
+bool TMDBAPI::GetSeasonImages(VideoInfo& videoInfo, int seasonNumber)
+{
+    std::stringstream sS;
+    // 拼接访问的URL
+    std::string uriStr = Config::Instance().GetApiUrl(GET_SEASON_IMAGES);
+    if (ReplaceString(uriStr, "{tv_id}", std::to_string(videoInfo.videoDetail.uniqueid.at("tmdb"))) <= 0) {
+        // FIXME: [*** LOG ERROR #0001 ***] [2024-01-21 12:30:22] [logger] argument not found [/home/bkzhao/Codes/ScraperServer/src/TMDBAPI.cpp(520)]
+        LOG_ERROR("Invalid api format for geting tv images(need contain {{tv_id}}): {}", uriStr);
+        return false;
+    }
+    if (ReplaceString(uriStr, "{season_number}", std::to_string(seasonNumber)) <= 0) {
+        LOG_ERROR("Invalid api format for geting tv images(need contain {{season_number}}): {}", uriStr);
+        return false;
+    }
+
+    // 依次使用"中文"-"英文"-"无语言"来获取图像
+    Poco::URI uriLangZh(uriStr);
+    uriLangZh.addQueryParameter("api_key", Config::Instance().GetApiKey());
+    uriLangZh.addQueryParameter("include_image_language", "zh");
+    LOG_DEBUG("Get season images uri(language zh) is: {}", uriLangZh.toString());
+
+    SendRequest(sS, uriLangZh);
+    ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
+
+    if (!IsImagesAllFilled(videoInfo.videoDetail)) {
+        Poco::URI uriLangEn(uriStr);
+        uriLangEn.addQueryParameter("api_key", Config::Instance().GetApiKey());
+        uriLangEn.addQueryParameter("include_image_language", "en");
+        LOG_DEBUG("Get season images uri(language en) is: {}", uriLangEn.toString());
+
+        SendRequest(sS, uriLangEn);
+        ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
+    }
+
+    if (!IsImagesAllFilled(videoInfo.videoDetail)) {
+        Poco::URI uriLangNull(uriStr);
+        uriLangNull.addQueryParameter("api_key", Config::Instance().GetApiKey());
+        uriLangNull.addQueryParameter("include_image_language", "null");
+        LOG_DEBUG("Get season images uri(language null) is: {}", uriLangNull.toString());
+
+        SendRequest(sS, uriLangNull);
+        ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
+    }
+
+    return true;
+}
+
+bool TMDBAPI::GetTVImages(VideoInfo& videoInfo, int seasonNumber)
+{
+    // 优先使用季的图片
+    if (!GetSeasonImages(videoInfo, seasonNumber)) {
+        return false;
+    }
+
+    // 如果季的图片完整, 则不需要获取剧的图片
+    if (IsImagesAllFilled(videoInfo.videoDetail)) {
+        return true;
+    }
+
+    std::stringstream sS;
+    // 拼接访问的URL
+    std::string uriStr = Config::Instance().GetApiUrl(GET_TV_IMAGES);
+    if (ReplaceString(uriStr, "{tv_id}", std::to_string(videoInfo.videoDetail.uniqueid.at("tmdb"))) <= 0) {
+        LOG_ERROR("Invalid api format for geting tv images(need contain {{tv_id}}): {}", uriStr);
+        return false;
+    }
+
+    // 依次使用"中文"-"英文"-"无语言"来获取图像
+    Poco::URI uriLangZh(uriStr);
+    uriLangZh.addQueryParameter("api_key", Config::Instance().GetApiKey());
+    uriLangZh.addQueryParameter("include_image_language", "zh");
+    LOG_DEBUG("Get season images uri(language zh) is: {}", uriLangZh.toString());
+
+    SendRequest(sS, uriLangZh);
+    ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
+
+    if (!IsImagesAllFilled(videoInfo.videoDetail)) {
+        Poco::URI uriLangEn(uriStr);
+        uriLangEn.addQueryParameter("api_key", Config::Instance().GetApiKey());
+        uriLangEn.addQueryParameter("include_image_language", "en");
+        LOG_DEBUG("Get season images uri(language en) is: {}", uriLangEn.toString());
+
+        SendRequest(sS, uriLangEn);
+        ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
+    }
+
+    if (!IsImagesAllFilled(videoInfo.videoDetail)) {
+        Poco::URI uriLangNull(uriStr);
+        uriLangNull.addQueryParameter("api_key", Config::Instance().GetApiKey());
+        uriLangNull.addQueryParameter("include_image_language", "null");
+        LOG_DEBUG("Get season images uri(language null) is: {}", uriLangNull.toString());
 
         SendRequest(sS, uriLangNull);
         ParseImagesToVideoDetail(sS, videoInfo.videoDetail);
@@ -616,11 +713,14 @@ bool TMDBAPI::ScrapeMovie(VideoInfo& videoInfo, int movieID)
 
 bool TMDBAPI::ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId)
 {
+    // 清空所有的矢量, 刮削时矢量元素的添加均为push_back()
     videoInfo.videoDetail.genre.clear();
     videoInfo.videoDetail.countries.clear();
     videoInfo.videoDetail.credits.clear();
     videoInfo.videoDetail.studio.clear();
     videoInfo.videoDetail.actors.clear();
+    // 设置季编号
+    videoInfo.videoDetail.seasonNumber = seasonId;
 
     std::stringstream sS;
     if (!GetTVDetail(tvId, seasonId, videoInfo.videoDetail)) {
@@ -642,6 +742,10 @@ bool TMDBAPI::ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId)
 
     if (!VideoInfoToNfo(videoInfo, videoInfo.nfoPath, true, "tmdb")) {
         m_lastErrCode = WRITE_NFO_FILE_FAILED;
+        return false;
+    }
+
+    if (!GetTVImages(videoInfo, seasonId)) {
         return false;
     }
 

@@ -29,6 +29,7 @@ private:
     static bool IsVideo(const std::string& suffix);
     static bool IsNfoFormatMatch(const std::string& nfoPath);
     static bool IsJpgCompleted(const std::string& posterPath);
+    static bool IsPNGCompleted(const std::string& posterPath);
 
     static std::string GetLargestFile(const std::string& path);
 

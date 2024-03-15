@@ -1,5 +1,4 @@
 {
-    "Port": 54250,
     "LogLevel": "info",
     "AutoInterval": 300,
     "Network": {
@@ -21,8 +20,8 @@
             "GetSeasonDetail": "http://api.themoviedb.org/3/tv/{tv_id}/season/",
             "ImageDownload": "http://image.tmdb.org/t/p/",
             "GetMovieImages": "http://api.themoviedb.org/3/movie/{movie_id}/images",
-            "GetTVImages": "http://api.themoviedb.org/3/tv/{series_id}/images",
-            "GetSeasonImages": "http://api.themoviedb.org/3/tv/{series_id}/season/{season_number}/images"
+            "GetTVImages": "http://api.themoviedb.org/3/tv/{tv_id}/images",
+            "GetSeasonImages": "http://api.themoviedb.org/3/tv/{tv_id}/season/{season_number}/images"
         },
         "Timeout": {
             "Download": 15,
@@ -39,8 +38,7 @@
             "/data/Movies"
         ],
         "TVs": [
-            "/data/TVs",
-            "/data/Bangumi"
+            "/data/TVs"
         ]
     }
 }

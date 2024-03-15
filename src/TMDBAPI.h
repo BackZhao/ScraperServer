@@ -57,9 +57,13 @@ private:
 
     bool GetTVCredits(int tmdbId, VideoDetail& videoDetail);
 
+    bool DownloadImages(VideoInfo& videoInfo);
+
     bool GetMovieImages(VideoInfo& videoInfo);
 
-    bool DownloadImages(VideoInfo& videoInfo);
+    bool GetSeasonImages(VideoInfo& videoInfo, int seasonNumber);
+
+    bool GetTVImages(VideoInfo& videoInfo, int seasonNumber);
 
 private:
 

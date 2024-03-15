@@ -61,24 +61,56 @@ bool DataSource::IsNfoFormatMatch(const std::string& nfoPath)
 bool DataSource::IsJpgCompleted(const std::string& posterName)
 {
     // JPEG头尾的标记码
-    static uint16_t SOI = 0xD8FF;
-    static uint16_t EOI = 0xD9FF;
+    static std::vector<uint8_t> SOI = {0xFF, 0xD8};
+    static std::vector<uint8_t> EOI = {0xFF, 0xD9};
 
     // 比较文件的头两字节和尾两字节与标记码
     std::ifstream ifs(posterName, std::ios::binary);
     if (ifs.is_open()) {
-        uint16_t firstTwoBytes = 0;
-        uint16_t lastTwoBytes  = 0;
-        ifs.read(reinterpret_cast<char*>(&firstTwoBytes), sizeof(firstTwoBytes));
-        ifs.seekg(-(sizeof(lastTwoBytes)), std::ios_base::end);
-        ifs.read(reinterpret_cast<char*>(&lastTwoBytes), sizeof(lastTwoBytes));
+        static std::vector<uint8_t> firstTwoBytes(2);
+        static std::vector<uint8_t> lastTwoBytes(2);
+        ifs.read(reinterpret_cast<char*>(&firstTwoBytes[0]), firstTwoBytes.size());
+        ifs.seekg(-(lastTwoBytes.size()), std::ios_base::end);
+        ifs.read(reinterpret_cast<char*>(&lastTwoBytes[0]), lastTwoBytes.size());
         ifs.close();
 
-        if (firstTwoBytes != SOI || lastTwoBytes != EOI) {
-            LOG_ERROR("{} SOI({:0X})/EOI({:0X}) unmatched(JPEG SOI 0XD8FF, EOI 0xD9FF)!",
+        if (std::memcmp(firstTwoBytes.data(), SOI.data(), SOI.size()) != 0 ||
+            std::memcmp(lastTwoBytes.data(), EOI.data(), EOI.size()) != 0) {
+            LOG_ERROR("{} SOI({:#02X} {:#02X})/EOI({:#02X} {:#02X}) unmatched! JPEG signature: SOI(0xFF 0xD8)/EOI(0xFF 0xD9)!",
                       posterName,
-                      firstTwoBytes,
-                      lastTwoBytes);
+                      firstTwoBytes[0],
+                      firstTwoBytes[1],
+                      lastTwoBytes[0],
+                      lastTwoBytes[1]);
+            return false;
+        }
+    } else {
+        LOG_ERROR("{} open failed for checking: {}", posterName, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+bool DataSource::IsPNGCompleted(const std::string& posterName)
+{
+    // PNG头尾的标识
+    static std::vector<uint8_t> PNGsignature = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+    static std::vector<uint8_t> PNGIEND      = {0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
+
+    // 比较文件的头两字节和尾两字节与标记码
+    std::ifstream ifs(posterName, std::ios::binary);
+    if (ifs.is_open()) {
+        static std::vector<uint8_t> firstEightBytes(8);
+        static std::vector<uint8_t> lastEightBytes(8);
+        ifs.read(reinterpret_cast<char*>(&firstEightBytes[0]), firstEightBytes.size());
+        ifs.seekg(-(lastEightBytes.size()), std::ios_base::end);
+        ifs.read(reinterpret_cast<char*>(&lastEightBytes[0]), lastEightBytes.size());
+        ifs.close();
+
+        if (std::memcmp(firstEightBytes.data(), PNGsignature.data(), PNGsignature.size()) != 0 ||
+            std::memcmp(lastEightBytes.data(), PNGIEND.data(), PNGIEND.size()) != 0) {
+            LOG_ERROR("{} PNG imcomplete!", posterName);
             return false;
         }
     } else {
@@ -175,6 +207,24 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
         }
     };
 
+    auto CheckFanart = [&](const std::string& fanartPath) {
+        if (Poco::File(fanartPath).exists()) {
+            videoInfo.fanartStatus = IsJpgCompleted(fanartPath) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
+            videoInfo.fanartPath   = fanartPath;
+        } else {
+            videoInfo.fanartStatus = FILE_NOT_FOUND;
+        }
+    };
+
+    auto CheckClearlogo = [&](const std::string& clearlogoPath) {
+        if (Poco::File(clearlogoPath).exists()) {
+            videoInfo.clearlogoStatus = IsPNGCompleted(clearlogoPath) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
+            videoInfo.clearlogoPath   = clearlogoPath;
+        } else {
+            videoInfo.clearlogoStatus = FILE_NOT_FOUND;
+        }
+    };
+
     auto CheckEpisodes = [&]() {
         const auto& episodePaths = videoInfo.videoDetail.episodePaths;
         for (const auto& episodePath : episodePaths) {
@@ -196,6 +246,8 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             videoInfo.clearlogoPath = baseNameWithDir + "-clearlogo.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
+            CheckFanart(videoInfo.fanartPath);
+            CheckClearlogo(videoInfo.clearlogoPath);
             if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
                 GetHdrFormat(videoInfo);
             } else {
@@ -213,6 +265,8 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             videoInfo.clearlogoPath    = dirName + "clearlogo.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
+            CheckFanart(videoInfo.fanartPath);
+            CheckClearlogo(videoInfo.clearlogoPath);
             CheckEpisodes();
             if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
                 GetHdrFormat(videoInfo);
@@ -295,6 +349,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
                 if (IsVideo(iter.path().getExtension())) {
                     LOG_TRACE("Found movie: {}", iter->path());
                     VideoInfo videoInfo(MOVIE, iter->path());
+                    videoInfo.videoFiletype = NO_FOLDER;
                     videoInfos.push_back(videoInfo);
                 }
             } else if (iter->isDirectory()) { // 仅添加目录下的最大视频文件
@@ -302,6 +357,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
                 if (!largestVideoFile.empty()) {
                     LOG_TRACE("Found movie: {}", largestVideoFile);
                     VideoInfo videoInfo(MOVIE, largestVideoFile);
+                    videoInfo.videoFiletype = IN_FOLDER;
                     videoInfos.push_back(videoInfo);
                 }
             }
@@ -349,6 +405,7 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
             // 电视剧仅添加一级目录
             if (iter->isDirectory()) {
                 VideoInfo videoInfo(TV, iter->path());
+                videoInfo.videoFiletype = IN_FOLDER;
                 videoInfos.push_back(videoInfo);
             }
             ++iter;
