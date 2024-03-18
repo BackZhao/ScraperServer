@@ -46,6 +46,12 @@ void ApiManager::Scan(const Poco::JSON::Object &param, std::ostream &out)
     }
     VideoType videoType = findResult->second;
 
+    // 扫描的类别需要配置文件中存在此路径
+    if (m_paths.find(videoType) == m_paths.end()) {
+        FillWithResponseJson(out, false, "Specified video type " + VIDEO_TYPE_TO_STR.at(videoType) + " not configured paths in conf file.");
+        return;
+    }
+
     // 无法加锁说明后台正在扫描
     std::unique_lock<std::mutex> locker(m_scanInfos.at(videoType).lock, std::try_to_lock);
     if (!locker.owns_lock()) {
