@@ -624,32 +624,6 @@ bool TMDBAPI::UpdateTV(VideoInfo& videoInfo)
         return false;
     }
 
-    Parser      parser;
-    Object::Ptr jsonPtr = nullptr;
-    try {
-        auto result = parser.parse(seasonDetailStream);
-        jsonPtr     = result.extract<Object::Ptr>();
-    } catch (Poco::Exception& e) {
-        LOG_ERROR("Parse season detail failed, text: {}", seasonDetailStream.str());
-        return false;
-    }
-
-    // TODO: 当TMDB API剧集数量尚未更新时, 使用默认标题
-    auto episodesJsonArr = jsonPtr->getArray("episodes");
-    if (episodesJsonArr->size() < videoInfo.videoDetail.episodePaths.size()) {
-        LOG_ERROR(
-            "TMDB api return less episode: {} < {}", episodesJsonArr->size(), videoInfo.videoDetail.episodePaths.size());
-        return false;
-    }
-
-    if (!WriteEpisodeNfo(episodesJsonArr, videoInfo.videoDetail.episodePaths, videoInfo.videoDetail.seasonNumber)) {
-        LOG_ERROR("Write episode nfos failed!");
-        return false;
-    } else {
-        // 如果写入成功, 需要即时更新, 否则剧集nfo个数未更新会导致反复写入新剧集的nfo
-        videoInfo.videoDetail.episodeNfoCount = videoInfo.videoDetail.episodePaths.size();
-    }
-
     // FIXME: XML更新错误 
     // std::stringstream tvDetailStream;
     // if (!GetTvDetail(tvDetailStream, videoInfo.videoDetail.uniqueid)) {
