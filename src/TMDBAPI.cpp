@@ -612,10 +612,11 @@ bool TMDBAPI::GetTVImages(VideoInfo& videoInfo, int seasonNumber)
 
 bool TMDBAPI::UpdateTV(VideoInfo& videoInfo)
 {
-    if (videoInfo.videoDetail.isEnded) {
-        LOG_ERROR("Current video is ended: {}", videoInfo.videoPath);
-        return false;
-    }
+    // TODO: 目前无法正确设置剧集是否完结
+    // if (videoInfo.videoDetail.isEnded) {
+    //     LOG_ERROR("Current video is ended: {}", videoInfo.videoPath);
+    //     return false;
+    // }
 
     std::stringstream seasonDetailStream;
     if (!GetSeasonDetail(videoInfo.videoDetail.uniqueid.at("tmdb"), videoInfo.videoDetail.seasonNumber, videoInfo.videoDetail)) {

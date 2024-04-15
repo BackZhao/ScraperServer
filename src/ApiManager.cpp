@@ -387,8 +387,8 @@ void ApiManager::AutoUpdateTV()
     TMDBAPI api;
     LOG_DEBUG("Search for new episodes...");
     for (auto &videoInfo : m_videoInfos.at(TV)) {
-        if (!videoInfo.videoDetail.isEnded &&
-            videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
+        // TODO: 当前无法正确判断剧集是否连载/完结
+        if (videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
             LOG_INFO("Try to auto update tv info {}...", videoInfo.videoPath);
             if (!api.UpdateTV(videoInfo)) {
                 LOG_ERROR("Failed to update TV: {}", videoInfo.videoPath);
