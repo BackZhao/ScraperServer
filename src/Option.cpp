@@ -9,6 +9,8 @@
 
 #include <version.h>
 
+#include "Utils.h"
+
 int ParseOption()
 {
     return 0;
@@ -40,31 +42,6 @@ Options:
 bool Option::IsDaemon()
 {
     return m_isDaemon;
-}
-
-int Option::ParseLogLevel(const std::string& levelStr)
-{
-    // 全转大写
-    std::string upperLevelStr;
-    for (auto ch : levelStr) {
-        upperLevelStr += std::toupper(ch);
-    }
-
-    if (upperLevelStr == "TRACE" || upperLevelStr == "T") {
-        return 0;
-    } else if (upperLevelStr == "DEBUG" || upperLevelStr == "D") {
-        return 1;
-    } else if (upperLevelStr == "INFO" || upperLevelStr == "I") {
-        return 2;
-    } else if (upperLevelStr == "WARN" || upperLevelStr == "W") {
-        return 3;
-    } else if (upperLevelStr == "ERROR" || upperLevelStr == "E") {
-        return 4;
-    } else if (upperLevelStr == "CRITICAL" || upperLevelStr == "C") {
-        return 5;
-    } else {
-        return -1;
-    }
 }
 
 int Option::Process()

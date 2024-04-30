@@ -209,6 +209,15 @@ set_target_properties(
   PROPERTIES SYSTEM true
 )
 
+add_library(Utils
+  STATIC
+  src/Utils.cpp
+  )
+target_link_libraries(Utils
+  PRIVATE
+  Poco::JSON
+  )
+
 add_library(Logger
   STATIC
   src/Logger.cpp
@@ -226,6 +235,7 @@ target_link_libraries(Option
   PRIVATE
   ${version_macro}
   getopt
+  Utils
   )
 
 add_library(Config
@@ -235,8 +245,8 @@ add_library(Config
 target_link_libraries(Config
   PRIVATE
   Poco::JSON
-  Poco::Foundation
   Logger
+  Utils
   )
 
 add_executable(Demo
@@ -248,7 +258,6 @@ add_executable(Demo
   src/DataSource.cpp
   src/ResourceManager.cpp
   src/TMDBAPI.cpp
-  src/Utils.cpp
   )
 target_link_libraries(Demo
   PRIVATE
@@ -273,7 +282,6 @@ add_executable(ScraperServer
   src/DataSource.cpp
   src/ResourceManager.cpp
   src/TMDBAPI.cpp
-  src/Utils.cpp
   )
 target_link_libraries(ScraperServer
   PRIVATE

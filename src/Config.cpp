@@ -10,6 +10,7 @@
 #include <Poco/StreamCopier.h>
 
 #include "Logger.h"
+#include "Utils.h"
 
 const std::string CONF_FILE_NAME           = "ScraperServer.json"; // 默认的配置文件名称
 const int         DEFAULT_HTTP_SERVER_PORT = 54250;                // 默认的HTTP服务器监听端口
@@ -152,31 +153,6 @@ bool Config::ParseConfFile()
         Poco::JSON::Parser      jsonParser;
         auto                    result  = jsonParser.parse(istr);
         Poco::JSON::Object::Ptr jsonPtr = result.extract<Poco::JSON::Object::Ptr>();
-
-        // TODO: 减少代码重复率
-        auto ParseLogLevel = [&](const std::string& levelStr) {
-            // 全转大写
-            std::string upperLevelStr;
-            for (auto ch : levelStr) {
-                upperLevelStr += std::toupper(ch);
-            }
-
-            if (upperLevelStr == "TRACE" || upperLevelStr == "T") {
-                return 0;
-            } else if (upperLevelStr == "DEBUG" || upperLevelStr == "D") {
-                return 1;
-            } else if (upperLevelStr == "INFO" || upperLevelStr == "I") {
-                return 2;
-            } else if (upperLevelStr == "WARN" || upperLevelStr == "W") {
-                return 3;
-            } else if (upperLevelStr == "ERROR" || upperLevelStr == "E") {
-                return 4;
-            } else if (upperLevelStr == "CRITICAL" || upperLevelStr == "C") {
-                return 5;
-            } else {
-                return -1;
-            }
-        };
 
         m_appConf.logLevel = ParseLogLevel(jsonPtr->optValue<std::string>("LogLevel", "info"));
         m_appConf.autoInterval = jsonPtr->optValue<int>("AutoInterval", AUTO_INTERVAL);

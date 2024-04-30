@@ -38,14 +38,6 @@ private:
      */
     void DisplayHelp();
 
-    /**
-     * @brief 解析日志等级
-     * 
-     * @param levelStr 
-     * @return int 
-     */
-    int ParseLogLevel(const std::string& levelStr);
-
 private:
 
     int    m_argc;
