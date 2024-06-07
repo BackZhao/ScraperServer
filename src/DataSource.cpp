@@ -1,5 +1,6 @@
 #include "DataSource.h"
 
+#include <Poco/SortedDirectoryIterator.h>
 #include <algorithm>
 #include <fstream>
 #include <functional>
@@ -11,6 +12,7 @@
 #include <Poco/AutoPtr.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
+#include <Poco/DirectoryIterator.h>
 #include <Poco/SortedDirectoryIterator.h>
 
 #include "DataConvert.h"
@@ -304,8 +306,8 @@ bool DataSource::IsMetaCompleted(const VideoInfo& videoInfo)
 std::string DataSource::GetLargestFile(const std::string& path)
 {
     // 遍历文件
-    Poco::SortedDirectoryIterator               iter(path);
-    Poco::SortedDirectoryIterator               end;
+    Poco::DirectoryIterator               iter(path);
+    Poco::DirectoryIterator               end;
     std::string                                 largestVideoFile;
     std::vector<std::pair<std::string, size_t>> videos;
     while (iter != end) {
@@ -340,8 +342,8 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
 
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
-        Poco::SortedDirectoryIterator iter(moviePath); // TODO: 没有处理路径不存在的问题
-        Poco::SortedDirectoryIterator end;
+        Poco::DirectoryIterator iter(moviePath); // TODO: 没有处理路径不存在的问题
+        Poco::DirectoryIterator end;
         while (iter != end && !m_isCancel) {
             LOG_TRACE("Scanning file/directory {} ...", iter->path());
             // 电影的最大扫描深度为1
@@ -399,8 +401,8 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
     // 遍历所有电视剧数据源
     const auto& tvPaths = paths;
     for (const auto& tvPath : tvPaths) {
-        Poco::SortedDirectoryIterator iter(tvPath);
-        Poco::SortedDirectoryIterator end;
+        Poco::DirectoryIterator iter(tvPath);
+        Poco::DirectoryIterator end;
         while (iter != end && !m_isCancel) {
             // 电视剧仅添加一级目录
             if (iter->isDirectory()) {
