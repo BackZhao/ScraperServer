@@ -342,6 +342,11 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
 
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
+        if (!Poco::Path(moviePath).isDirectory()) {
+            LOG_ERROR("Given path {} is not dir or doesn't exist", moviePath);
+            continue;
+        }
+
         Poco::DirectoryIterator iter(moviePath); // TODO: 没有处理路径不存在的问题
         Poco::DirectoryIterator end;
         while (iter != end && !m_isCancel) {
@@ -401,6 +406,11 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
     // 遍历所有电视剧数据源
     const auto& tvPaths = paths;
     for (const auto& tvPath : tvPaths) {
+        if (!Poco::Path(tvPath).isDirectory()) {
+            LOG_ERROR("Given path {} is not dir or doesn't exist", tvPath);
+            continue;
+        }
+
         Poco::DirectoryIterator iter(tvPath);
         Poco::DirectoryIterator end;
         while (iter != end && !m_isCancel) {
