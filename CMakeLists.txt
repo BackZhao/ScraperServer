@@ -342,7 +342,7 @@ ${_}_binary_res_zip_size = ${_}_binary_res_zip_end - ${_}_binary_res_zip_start
     set(RES_O ${CMAKE_CURRENT_BINARY_DIR}/res.o)
     add_custom_command(
       OUTPUT ${RES_O}
-      COMMAND "${CMAKE_LINKER}" -r -b binary -o res.o res.zip
+      COMMAND "${CMAKE_LINKER}" -r -b binary -o res.o res.zip -z noexecstack
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       DEPENDS ${RES_ZIP}
       VERBATIM
