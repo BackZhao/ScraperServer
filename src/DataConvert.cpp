@@ -14,6 +14,7 @@
 #include <Poco/XML/XMLWriter.h>
 
 #include "Config.h"
+#include "HDRToolKit.h"
 #include "Logger.h"
 
 using Poco::AutoPtr;
@@ -26,15 +27,7 @@ void VideoInfoToBriefJson(const VideoInfo& videoInfo, Object& outJson)
     outJson.set("VideoPath", videoInfo.videoPath);
     outJson.set("NfoStatus", static_cast<int>(videoInfo.nfoStatus));
     outJson.set("PosterStatus", static_cast<int>(videoInfo.posterStatus));
-
-    static std::map<HDRType, std::string> hdrEnumToStr = {
-        {NON_HDR, "Non-HDR"},
-        {HDR10, "HDR10"},
-        {HDR10Plus, "HDR10+"},
-        {DOLBY_VISION, "Dolby Vision"},
-        {DOLBY_VISION_AND_HDR10, "Dolby Vision & HDR10"},
-    };
-    outJson.set("HDRType", hdrEnumToStr.at(videoInfo.hdrType));
+    outJson.set("HDRType", VIDEO_RANGE_TYPE_TO_STR_MAP.at(videoInfo.hdrType));
 }
 
 void VideoInfoToDetailedJson(const VideoInfo& videoInfo, Object& outJson)
@@ -141,16 +134,9 @@ bool VideoInfoToNfo(const VideoInfo&   videoInfo,
         parent->appendChild(ele);
     };
 
-    if (setHDRTitle && videoInfo.hdrType != NON_HDR) {
-        static std::map<HDRType, std::string> hdrEnumToTitleStr = {
-            {NON_HDR, ""},
-            {HDR10, "HDR10"},
-            {HDR10Plus, "HDR10+"},
-            {DOLBY_VISION, "Dolby Vision"},
-            {DOLBY_VISION_AND_HDR10, "Dolby Vision"},
-        };
+    if (setHDRTitle && videoInfo.hdrType != VideoRangeType::SDR) {
         std::string title = videoInfo.videoDetail.title;
-        std::string hdrTitle = hdrEnumToTitleStr.at(videoInfo.hdrType);
+        std::string hdrTitle = VIDEO_RANGE_TYPE_TO_STR_MAP.at(videoInfo.hdrType);
         if (title.find(hdrTitle) == std::string::npos) {
             createAndAppendText(rootEle, "title", title + " " + hdrTitle);
         } else {

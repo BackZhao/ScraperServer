@@ -1,11 +1,10 @@
 #include "ApiManager.h"
 
-#include <fstream>
-
 #include <Poco/DateTimeFormatter.h>
 
 #include <version.h>
 
+#include "CommonType.h"
 #include "DataConvert.h"
 #include "Logger.h"
 #include "TMDBAPI.h"
@@ -388,7 +387,8 @@ void ApiManager::AutoUpdateTV()
     LOG_DEBUG("Search for new episodes...");
     for (auto &videoInfo : m_videoInfos.at(TV)) {
         // TODO: 当前无法正确判断剧集是否连载/完结
-        if (videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
+        if (videoInfo.nfoStatus == FILE_FORMAT_MATCH &&
+            videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
             LOG_INFO("Try to auto update tv info {}...", videoInfo.videoPath);
             if (!api.UpdateTV(videoInfo)) {
                 LOG_ERROR("Failed to update TV: {}", videoInfo.videoPath);

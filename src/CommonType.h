@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "HDRToolKit.h"
+
 const std::vector<std::string> VIDEO_SUFFIX = {"mkv", "mp4", "iso", "ts"}; // 视频文件的后缀名集合
 
 /**
@@ -25,18 +27,6 @@ enum MetaFileStatus {
     FILE_FORMAT_MATCH,    // 文件格式匹配
     FILE_FORMAT_MISMATCH, // 文件格式不匹配
     FILE_NOT_FOUND,       // 文件不存在
-};
-
-/**
- * @brief 视频的HDR类型
- * 
- */
-enum HDRType {
-    NON_HDR,                // 非HDR类型
-    HDR10,                  // HDR10
-    HDR10Plus,              // HDR10+
-    DOLBY_VISION,           // 杜比视界
-    DOLBY_VISION_AND_HDR10, //杜比视界 + HDR10
 };
 
 /**
@@ -144,10 +134,10 @@ struct VideoDetail {
 struct VideoInfo {
     VideoInfo(VideoType type, const std::string& path) : videoType(type), videoPath(path) {}
 
-    VideoType     videoType; // 视频类型
-    std::string   videoPath; // 视频所在路径
-    HDRType       hdrType;   // HDR的类型
-    VideoFileType videoFiletype;
+    VideoType      videoType;                     // 视频类型
+    std::string    videoPath;                     // 视频所在路径
+    VideoRangeType hdrType = VideoRangeType::SDR; // HDR的类型
+    VideoFileType  videoFiletype;
 
     MetaFileStatus nfoStatus;       // NFO文件状态
     MetaFileStatus posterStatus;    // 海报文件状态

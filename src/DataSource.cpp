@@ -1,14 +1,15 @@
 #include "DataSource.h"
 
+#include <Poco/File.h>
+#include <Poco/Path.h>
 #include <Poco/SortedDirectoryIterator.h>
 #include <algorithm>
 #include <fstream>
 #include <functional>
-#include <locale>
+#include <regex>
 #include <set>
 #include <string>
 
-// #include <MediaInfoDLL/MediaInfoDLL.h>
 #include <Poco/AutoPtr.h>
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
@@ -16,6 +17,7 @@
 #include <Poco/SortedDirectoryIterator.h>
 
 #include "DataConvert.h"
+#include "HDRToolKit.h"
 #include "Logger.h"
 
 using namespace Poco::XML;
@@ -125,65 +127,8 @@ bool DataSource::IsPNGCompleted(const std::string& posterName)
 
 void GetHdrFormat(VideoInfo& videoInfo)
 {
-    // using namespace MediaInfoDLL;
-
-    // MediaInfo mi;
-    // std::setlocale(LC_ALL, "en_US.utf8");
-
-    // switch (videoInfo.videoType) {
-    //     case MOVIE: {
-    //         if (mi.Open(videoInfo.videoPath) <= 0) {
-    //             LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
-    //             videoInfo.hdrType = NON_HDR;
-    //             return;
-    //         }
-    //         break;
-    //     }
-    //     case TV: {
-    //         if (videoInfo.videoDetail.episodePaths.size() > 0) {
-    //             // 以第一集的HDR类型填写
-    //             if (mi.Open(videoInfo.videoDetail.episodePaths.at(0)) <= 0) {
-    //                 LOG_ERROR("Failed to open with mediainfolib! path: {}", videoInfo.videoPath);
-    //                 videoInfo.hdrType = NON_HDR;
-    //                 return;
-    //             }
-    //         } else {
-    //             LOG_ERROR("No eposide found! path: {}", videoInfo.videoPath);
-    //             videoInfo.hdrType = NON_HDR;
-    //         }
-    //         break;
-    //     }
-    //     default:
-    //         break;
-    // }
-
-    // if (mi.Count_Get(Stream_Video) < 1) {
-    //     LOG_ERROR("Video stream not found with MediaInfoLib, set as NON-HDR! path: {}", videoInfo.videoPath);
-    //     return;
-    // }
-
-    // std::string hdrFormat = mi.Get(Stream_Video, 0, "HDR_Format_Commercial");
-
-    // // mediainfo打印的HDR_Format_Commercial可能结果
-    // static const std::string DV_FORMAT           = "Dolby Vision";   // DV
-    // static const std::string HDR10_FORMAT        = "HDR10";          // HDR10
-    // static const std::string HDR10Plus_FORMAT    = "HDR10+";         // HDR10
-    // static const std::string DV_AND_HDR10_FORMAT = "HDR10 / HDR10+"; // DV + HDR10
-
-    // if (hdrFormat == DV_AND_HDR10_FORMAT) {
-    //     videoInfo.hdrType = DOLBY_VISION_AND_HDR10;
-    // } else if (hdrFormat == DV_FORMAT) {
-    //     videoInfo.hdrType = DOLBY_VISION;
-    // } else if (hdrFormat == HDR10_FORMAT) {
-    //     videoInfo.hdrType = HDR10;
-    // } else if (hdrFormat == HDR10Plus_FORMAT) {
-    //     videoInfo.hdrType = HDR10Plus;
-    // } else {
-    //     videoInfo.hdrType = NON_HDR;
-    // }
-
-    // LOG_DEBUG("HDR type(parsed): {}, HDR format(MediaInfoLib): {}, path: {}", videoInfo.hdrType, hdrFormat, videoInfo.videoPath);
-    videoInfo.hdrType = NON_HDR;
+    videoInfo.hdrType =  HDRToolKit::GetHDRTypeFromFile(videoInfo.videoPath);
+    LOG_DEBUG("VideoRangeType: {}, {}", VIDEO_RANGE_TYPE_TO_STR_MAP.at(videoInfo.hdrType), videoInfo.videoPath);
 }
 
 // TODO: 检查是否有多个匹配的海报和nfo文件(依据Kodi的wiki说明)
@@ -253,7 +198,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
                 GetHdrFormat(videoInfo);
             } else {
-                videoInfo.hdrType = NON_HDR;
+                videoInfo.hdrType = VideoRangeType::SDR;
             }
             break;
         }
@@ -273,7 +218,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
                 GetHdrFormat(videoInfo);
             } else {
-                videoInfo.hdrType = NON_HDR;
+                videoInfo.hdrType = VideoRangeType::SDR;
             }
             break;
         }
@@ -342,7 +287,7 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
 
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
-        if (!Poco::Path(moviePath).isDirectory()) {
+        if (!Poco::File(moviePath).isDirectory()) {
             LOG_ERROR("Given path {} is not dir or doesn't exist", moviePath);
             continue;
         }
@@ -373,12 +318,55 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
     }
 
     for (auto& videoInfo : videoInfos) {
+        if (m_isCancel) {
+            return false;
+        }
         CheckVideoStatus(videoInfo, forceDetectHdr);
         processedVideoNum++;
     }
 
     LOG_DEBUG("Scan movie finished.");
     return true;
+}
+
+// generate by ChatGPT
+std::pair<int, int> ExtractSeasonAndEpisode(const std::string &name) {
+    std::regex pattern(R"([sS](\d+)[eE](\d+))");
+    std::smatch match;
+
+    if (std::regex_search(name, match, pattern)) {
+        return {std::stoi(match[1]), std::stoi(match[2])};
+    }
+    // 无法解析的返回 (-1, -1)
+    return {-1, -1};
+}
+
+bool CompareEpisodes(const std::string &a, const std::string &b) {
+    std::pair<int, int> seasonEpisodeA = ExtractSeasonAndEpisode(a);
+    std::pair<int, int> seasonEpisodeB = ExtractSeasonAndEpisode(b);
+
+    int seasonA = seasonEpisodeA.first;
+    int episodeA = seasonEpisodeA.second;
+    int seasonB = seasonEpisodeB.first;
+    int episodeB = seasonEpisodeB.second;
+
+    // 如果无法解析，直接返回 false，保持原有顺序
+    if (seasonA == -1 && seasonB == -1) {
+        return false;
+    }
+    if (seasonA == -1) {
+        return false; // a 排在 b 后面
+    }
+    if (seasonB == -1) {
+        return true; // b 排在 a 后面
+    }
+
+    // 先比较季
+    if (seasonA != seasonB) {
+        return seasonA < seasonB;
+    }
+    // 如果季相同，比较集
+    return episodeA < episodeB;
 }
 
 bool DataSource::ScanTv(const std::vector<std::string>& paths,
@@ -391,22 +379,24 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
 
     // 获取电视剧剧集的路径, 即添加给定目录下所有的视频文件
     auto GetEpisodePaths = [&](VideoInfo& videoInfo) {
-        Poco::SortedDirectoryIterator iter(videoInfo.videoPath);
-        Poco::SortedDirectoryIterator end;
+        Poco::DirectoryIterator iter(videoInfo.videoPath);
+        Poco::DirectoryIterator end;
 
-        while (iter != end) {
-            LOG_TRACE("Scanning for episodes: {}", iter->path());
+        auto& episodePaths = videoInfo.videoDetail.episodePaths;
+        while (iter != end && !m_isCancel) {
+            // LOG_TRACE("Scanning for episodes: {}", iter->path());
             if (IsVideo(iter.path().getExtension())) {
-                videoInfo.videoDetail.episodePaths.push_back(iter->path());
+                episodePaths.push_back(iter->path());
             }
             ++iter;
         }
+        std::sort(episodePaths.begin(), episodePaths.end(), CompareEpisodes);
     };
 
     // 遍历所有电视剧数据源
     const auto& tvPaths = paths;
     for (const auto& tvPath : tvPaths) {
-        if (!Poco::Path(tvPath).isDirectory()) {
+        if (!Poco::File(tvPath).isDirectory()) {
             LOG_ERROR("Given path {} is not dir or doesn't exist", tvPath);
             continue;
         }
@@ -425,6 +415,9 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
     }
 
     for (auto& videoInfo : videoInfos) {
+        if (m_isCancel) {
+            return false;
+        }
         GetEpisodePaths(videoInfo);
         CheckVideoStatus(videoInfo, forceDetectHdr);
         processedVideoNum++;

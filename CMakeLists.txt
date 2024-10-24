@@ -172,40 +172,12 @@ if(NOT TARGET spdlog::spdlog_header_only)
     )
 endif()
 
-set(BUILD_ZLIB ON CACHE BOOL "Build zlib shared library")
-set(BUILD_ZENLIB ON CACHE BOOL "Build ZenLib shared library")
-set(ENABLE_UNICODE OFF CACHE BOOL "Enable unicode support")
-
-set(SKIP_INSTALL_LIBRARIES ON CACHE BOOL "Skip install libs from zlib")
-set(SKIP_INSTALL_FILES ON CACHE BOOL "Skip install files from zlib")
-set(SKIP_INSTALL_HEADERS ON CACHE BOOL "Skip install headers from zlib")
-set(SKIP_INSTALL_ALL ON  CACHE BOOL "Skip install all from zlib")
-
-# mediainfo
-# find_package(mediainfo QUIET)
-# if(NOT TARGET mediainfo)
-  FetchContent_Import(
-    mediainfo
-    GIT_REPOSITORY "${GIT_REMOTE_ROOT}/MediaInfoLib.git"
-    GIT_TAG cmake
-    GIT_SHALLOW  ${XXX_GIT_SHALLOW}
-    GIT_PROGRESS ${XXX_GIT_PROGRESS}
-    EXCLUDE_FROM_ALL 
-    )
-  FetchContent_GetProperties(mediainfo)
-  if(NOT mediainfo_POPULATED)
-    FetchContent_Populate(mediainfo)
-    add_subdirectory(${mediainfo_SOURCE_DIR}/Project/CMake ${mediainfo_BINARY_DIR})
-  endif ()
-# endif()
-
 set_target_properties(
   Net
   JSON
   XML
   Foundation
   spdlog_header_only
-  mediainfo
   PROPERTIES SYSTEM true
 )
 
@@ -249,6 +221,19 @@ target_link_libraries(Config
   Utils
   )
 
+add_library(HDRToolKit
+  STATIC
+  src/HDRToolKit.cpp
+  )
+find_package(FFMPEG REQUIRED COMPONENTS avcodec avutil avformat)
+target_include_directories(HDRToolKit PRIVATE ${FFMPEG_INCLUDE_DIRS})
+target_link_directories(HDRToolKit PRIVATE ${FFMPEG_LIBRARY_DIRS})
+target_link_libraries(HDRToolKit
+  PRIVATE
+  Logger
+  ${FFMPEG_LIBRARIES}
+  )
+
 add_executable(Demo
   src/Demo.cpp
   src/HttpRequestHandler.cpp
@@ -266,11 +251,11 @@ target_link_libraries(Demo
     Logger
     Config
     Option
+    HDRToolKit
     Poco::Net
     Poco::JSON
     Poco::XML
     Poco::Zip
-    mediainfo
   )
 
 add_executable(ScraperServer
@@ -290,15 +275,13 @@ target_link_libraries(ScraperServer
     Logger
     Config
     Option
+    HDRToolKit
     Poco::Net
     Poco::JSON
     Poco::XML
     Poco::Zip
-    mediainfo
   )
 
-target_include_directories(Demo SYSTEM PRIVATE ${mediainfo_SOURCE_DIR}/Source)
-target_include_directories(ScraperServer SYSTEM PRIVATE ${mediainfo_SOURCE_DIR}/Source)
 # if(CMAKE_VERSION VERSION_LESS 3.17)
 #   foreach(target Net JSON XML Foundation)
 #     get_property(target_header TARGET ${target} PROPERTY PUBLIC_HEADER SET)
@@ -380,7 +363,6 @@ install(
     XML
     Zip
     Foundation
-    mediainfo
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
