@@ -9,14 +9,17 @@
 
 #include "CommonType.h"
 
+const int DEFAULT_HTTP_SERVER_PORT = 54250; // 默认的HTTP服务器监听端口
+const int AUTO_INTERVAL            = 300;   // 默认的自动刮削间隔, 单位: 秒
+
 /**
  * @brief 与网络相关的配置项
  *
  */
 struct NetworkConf {
-    uint16_t    listenPort; // HTTP服务器监听的端口号
-    std::string httpProxyHost;  // HTTP代理的主机名
-    uint16_t    httpProxyPort;  // HTTP代理的端口号
+    uint16_t    listenPort = DEFAULT_HTTP_SERVER_PORT; // HTTP服务器监听的端口号
+    std::string httpProxyHost;                         // HTTP代理的主机名
+    uint16_t    httpProxyPort;                         // HTTP代理的端口号
 };
 
 /**
@@ -69,8 +72,8 @@ struct AppConf {
     std::string    logFile;
     ApiConf        apiConf;
     DataSourceConf dataSourceConf;
-    int            autoInterval; // 自动刮削的间隔
-    bool           isAuto; // 是否为自动刮削模式
+    int            autoInterval = AUTO_INTERVAL; // 自动刮削的间隔
+    bool           isAuto;                       // 是否为自动刮削模式
 };
 
 class Config
@@ -170,14 +173,14 @@ public:
 
     /**
      * @brief 获取自动刮削的时间间隔
-     * 
+     *
      * @return int 自动刮削的时间间隔
      */
     int GetAutoInterval();
 
     /**
      * @brief 获取图像下载的质量
-     * 
+     *
      * @return std::string 图像下载质量
      */
     std::string GetImageDownloadQuality();
