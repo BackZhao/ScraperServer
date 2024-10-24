@@ -22,7 +22,7 @@ void ApiManager::ProcessScan(VideoType videoType, bool forceDetectHdr)
     m_scanInfos.at(videoType).scanStatus    = SCANNING;
     m_scanInfos.at(videoType).scanBeginTime = Poco::DateTime();
     DataSource::Scan(videoType,
-                     m_paths.at(videoType),
+                     m_paths[videoType],
                      m_videoInfos.at(videoType),
                      m_scanInfos.at(videoType).processedVideoNum,
                      forceDetectHdr);
