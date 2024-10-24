@@ -618,6 +618,12 @@ bool TMDBAPI::UpdateTV(VideoInfo& videoInfo)
     //     return false;
     // }
 
+    auto tmdbIdIter = videoInfo.videoDetail.uniqueid.find("tmdb");
+    if (tmdbIdIter == videoInfo.videoDetail.uniqueid.end()) {
+        LOG_ERROR("No TMDB ID for current video {}", videoInfo.videoPath);
+        return false;
+    }
+
     std::stringstream seasonDetailStream;
     if (!GetSeasonDetail(videoInfo.videoDetail.uniqueid.at("tmdb"), videoInfo.videoDetail.seasonNumber, videoInfo.videoDetail)) {
         LOG_ERROR("Get season detail failed for {}", videoInfo.videoPath);
