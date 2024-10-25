@@ -15,7 +15,10 @@ jobs:
       - name: Checkout codes
         uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Install FFMPEG
+        run: sudo apt install -y ffmpeg
+
+      - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Init vsDev for Windows
