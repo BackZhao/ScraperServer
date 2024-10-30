@@ -36,6 +36,9 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo);
  * @return true 
  * @return false 
  */
-bool WriteEpisodeNfo(const Poco::JSON::Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths, int seasonId);
+bool WriteEpisodeNfo(const Poco::JSON::Array::Ptr    jsonArrPtr,
+                     const std::vector<std::string>& episodePaths,
+                     int                             seasonId,
+                     bool                            forceUseOnlineTvMeta);
 
 bool SetTVEnded(const std::string& nfoPath);

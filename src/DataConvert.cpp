@@ -307,15 +307,18 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     return true;
 }
 
-bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>& episodePaths, int seasonId)
+bool WriteEpisodeNfo(const Array::Ptr                jsonArrPtr,
+                     const std::vector<std::string>& episodePaths,
+                     int                             seasonId,
+                     bool                            forceUseOnlineTvMeta)
 {
     // TODO: 如果TMDB提供的剧集数量与本地数量不符, 是否使用内置规则生成默认标题
     bool isEpisodeCountMatch = false;
     if (jsonArrPtr->size() == episodePaths.size()) {
         isEpisodeCountMatch = true;
     } else {
-        LOG_WARN("TMDB API returns mismatched episode count, using default rules to generate title! api: {}, local: {}",
-                 jsonArrPtr->size(), episodePaths.size());
+        LOG_WARN(
+            "TMDB API returns mismatched episode count! api: {}, local: {}", jsonArrPtr->size(), episodePaths.size());
     }
 
     for (size_t i = 0; i < episodePaths.size(); i++) {
@@ -341,24 +344,31 @@ bool WriteEpisodeNfo(const Array::Ptr jsonArrPtr, const std::vector<std::string>
             parent->appendChild(ele);
         };
 
+        auto episodeJsonPtr = jsonArrPtr->getObject(i);
         if (isEpisodeCountMatch) {
-            auto        episodeJsonPtr = jsonArrPtr->getObject(i);
-            std::string title          = isEpisodeCountMatch ? episodeJsonPtr->getValue<std::string>("name")
-                                                             : "第" + std::to_string(i + 1) + "集";
+            std::string title = episodeJsonPtr->getValue<std::string>("name");
             createAndAppendText(rootEle, "title", title);
-
             createAndAppendText(rootEle, "season", std::to_string(episodeJsonPtr->getValue<int>("season_number")));
             createAndAppendText(rootEle, "episode", std::to_string(episodeJsonPtr->getValue<int>("episode_number")));
             createAndAppendText(rootEle, "plot", episodeJsonPtr->getValue<std::string>("overview"));
         } else {
-            createAndAppendText(rootEle, "title", "第" + std::to_string(i + 1) + "集");
-
-            createAndAppendText(rootEle, "season", std::to_string(seasonId));
-            createAndAppendText(rootEle, "episode", std::to_string(i + 1));
-            createAndAppendText(rootEle, "plot", "");
+            // 强制使用在线剧集元数据时, 大于在线集数的使用生成的元数据
+            if (forceUseOnlineTvMeta && i <= jsonArrPtr->size()) {
+                std::string title = episodeJsonPtr->getValue<std::string>("name");
+                createAndAppendText(rootEle, "title", title);
+                createAndAppendText(rootEle, "season", std::to_string(episodeJsonPtr->getValue<int>("season_number")));
+                createAndAppendText(
+                    rootEle, "episode", std::to_string(episodeJsonPtr->getValue<int>("episode_number")));
+                createAndAppendText(rootEle, "plot", episodeJsonPtr->getValue<std::string>("overview"));
+            } else {
+                createAndAppendText(rootEle, "title", "第" + std::to_string(i + 1) + "集");
+                createAndAppendText(rootEle, "season", std::to_string(seasonId));
+                createAndAppendText(rootEle, "episode", std::to_string(i + 1));
+                createAndAppendText(rootEle, "plot", "");
+            }
         }
-        // TODO: 添加更多详细标签
 
+        // TODO: 添加更多详细标签
         DOMWriter writer;
         writer.setNewLine("\n");
         writer.setOptions(XMLWriter::PRETTY_PRINT);

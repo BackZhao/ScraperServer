@@ -31,6 +31,8 @@ private:
     static bool IsJpgCompleted(const std::string& posterPath);
     static bool IsPNGCompleted(const std::string& posterPath);
 
+    static void GetVideoPathesFromMovieSet(const std::string& path, std::vector<VideoInfo>& videoInfos);
+
     static std::string GetLargestFile(const std::string& path);
 
     static bool ScanMovie(const std::vector<std::string>& path,

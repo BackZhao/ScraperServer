@@ -39,7 +39,7 @@ public:
      * @return true 刮削成功
      * @return false 刮削失败
      */
-    virtual bool ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId) = 0;
+    virtual bool ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId, bool forceUseOnlineTvMeta = false) = 0;
 
     /**
      * @brief 获取最后一次的错误码(enum类型, 建议使用GetLastErrStr()接口)

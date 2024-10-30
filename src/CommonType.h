@@ -29,6 +29,7 @@ enum MetaFileStatus {
     FILE_NOT_FOUND,       // 文件不存在
 };
 
+// TODO: 移除该枚举, 目前没有实用意义
 /**
  * @brief 视频文件类型(是否在目录内, 主要针对电影)
  * 

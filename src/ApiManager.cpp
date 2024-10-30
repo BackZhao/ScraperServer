@@ -263,6 +263,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
 
     // 电视剧需要给定季编号
     int seasonId = 0;
+    bool forceUseOnlineTvMeta = param.optValue("forceUseOnlineTvMeta", false);
     if (videoType == TV) {
         if (!param.has("seasonId")) {
             out << R"({"success": false, "msg": "TV should give season id!"})";
@@ -271,10 +272,9 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
         seasonId = std::stoi(param.getValue<std::string>("seasonId"));
     }
 
-    // TODO: 当NFO文件损坏时, 必须制定force才进行刮削
-
-    auto &videoInfo                = m_videoInfos.at(videoType).at(id);
-    int tmdbId = std::stoi(param.getValue<std::string>("tmdbid"));
+    // TODO: 当NFO文件损坏时, 必须指定force才进行刮削
+    auto             &videoInfo = m_videoInfos.at(videoType).at(id);
+    int               tmdbId    = std::stoi(param.getValue<std::string>("tmdbid"));
     std::stringstream sS;
     switch (videoType) {
         case MOVIE: {
@@ -288,7 +288,7 @@ void ApiManager::Scrape(const Poco::JSON::Object &param, std::ostream &out)
         }
         case TV: {
             TMDBAPI api;
-            if (!api.ScrapeTV(videoInfo, tmdbId, seasonId)) {
+            if (!api.ScrapeTV(videoInfo, tmdbId, seasonId, forceUseOnlineTvMeta)) {
                 FillWithResponseJson(out, false, api.GetLastErrStr());
             } else {
                 FillWithResponseJson(out, true, videoInfo.videoDetail.title);
@@ -477,7 +477,7 @@ void ApiManager::RefreshTV()
 
         // TODO: API接口调整
         TMDBAPI api;
-        if (!api.ScrapeTV(videoInfo, videoInfo.videoDetail.uniqueid["tmdb"], videoInfo.videoDetail.seasonNumber)) {
+        if (!api.ScrapeTV(videoInfo, videoInfo.videoDetail.uniqueid["tmdb"], videoInfo.videoDetail.seasonNumber, true)) {
             failedVec.push_back(videoInfo.videoPath);
             continue;
         }

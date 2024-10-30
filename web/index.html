@@ -47,18 +47,21 @@
 <body>
     <div id="app">
         <input type="checkbox" v-model="forceDetectHdr">强制检测HDR<br>
+        <input type="checkbox" v-model="forceUseOnlineTvMeta" checked>强制使用在线剧集元数据<br>
         <template v-for="type in videoType">
             <input type="radio" v-model="currentType" :value="type">{{ type }}<br>
         </template>
         <button @click="Scan" :disabled="scanDetail.get(currentType).status === 'scanning'">扫描</button>
-        <button @click="GetUncompletedMovies"
-            :disabled="scanDetail.get(currentType).status !== 'finished'">获取列表</button>
+        <button @click="GetUncompletedList"
+            :disabled="scanDetail.get(currentType).status !== 'finished'">获取不完整列表</button>
+        <button @click="GetAllList"
+            :disabled="scanDetail.get(currentType).status !== 'finished'">获取所有列表</button>
         <div>扫描状态: {{ scanDetail.get(currentType).status }}</div>
         <div>扫描进度: {{ scanDetail.get(currentType).status === 'finished' ? '100%' : scanDetail.get(currentType).processedVideoNum + '/' + scanDetail.get(currentType).totalVideoNum }}</div>
         <div>开始时间: {{ scanDetail.get(currentType).scanBeginTime }}</div>
         <div>结束时间: {{ scanDetail.get(currentType).scanEndTime }}</div>
         <div>视频总数: {{ scanDetail.get(currentType).totalVideoNum }}</div>
-        <div>不完整视频总数: {{ unCompletedVideosLists.length }}</div>
+        <div>不完整视频总数: {{ videosLists.length }}</div>
         <table>
             <tr>
                 <th>ID</th>
@@ -68,7 +71,7 @@
                 <th>HDR类型</th>
                 <th>刮削</th>
             </tr>
-            <template v-for="(video, index) in unCompletedVideosLists" :key="video.id">
+            <template v-for="(video, index) in videosLists" :key="video.id">
                 <tr>
                     <td>{{ video.id }}</td>
                     <td>{{ video.VideoPath }}</td>
@@ -110,6 +113,7 @@
                     videoType: ['movie', 'tv'],
                     currentType: 'movie',
                     forceDetectHdr: false,
+                    forceUseOnlineTvMeta: true,
                     scanDetail: new Map(
                         [
                             ['movie', {
@@ -128,7 +132,7 @@
                             }],
                         ]
                     ),
-                    unCompletedVideosLists: [],
+                    videosLists: [],
                     status2Str: ['完好', '损坏', '不存在'],
                     apiAddr: window.location.protocol + '//' + window.location.host,
                     //apiAddr: 'http://xanas.backzhao.cn:54250',
@@ -181,7 +185,7 @@
                                         this.scanDetail.get(result.VideoType).status = 'finished';
                                         this.scanDetail.get(result.VideoType).scanBeginTime = result.ScanBeginTime;
                                         this.scanDetail.get(result.VideoType).scanEndTime = result.ScanEndTime;
-                                        this.GetUncompletedMovies();
+                                        this.GetUncompletedList();
                                         break;
                                     default:
                                         break;
@@ -190,15 +194,28 @@
                         });
                 },
 
-                GetUncompletedMovies() {
+                GetUncompletedList() {
                     fetch(this.apiAddr + "/api/list?videoType=" + this.currentType + "&status=incomplete", this.requestOptions)
                         .then((res) => res.json())
                         .then((res) => {
                             if (res.success) {
-                                this.unCompletedVideosLists = res.list;
-                                console.log("不完整的电影总数: " + this.unCompletedVideosLists.length);
+                                this.videosLists = res.list;
+                                console.log("不完整的视频总数: " + this.videosLists.length);
                             } else {
-                                console.log("获取不完整电影列表失败");
+                                console.log("获取不完整视频列表失败");
+                            }
+                        });
+                },
+
+                GetAllList() {
+                    fetch(this.apiAddr + "/api/list?videoType=" + this.currentType + "&status=all", this.requestOptions)
+                        .then((res) => res.json())
+                        .then((res) => {
+                            if (res.success) {
+                                this.videosLists = res.list;
+                                console.log("所有视频总数: " + this.videosLists.length);
+                            } else {
+                                console.log("获取所有视频列表失败");
                             }
                         });
                 },
@@ -209,9 +226,9 @@
                         .then((res) => {
                             if (res.success) {
                                 console.log("刮削电影成功, 标题: " + res.msg);
-                                this.unCompletedVideosLists[index].scrapedTitle = res.msg;
-                                this.unCompletedVideosLists[index].NfoStatus = 0;
-                                this.unCompletedVideosLists[index].PosterStatus = 0;
+                                this.videosLists[index].scrapedTitle = res.msg;
+                                this.videosLists[index].NfoStatus = 0;
+                                this.videosLists[index].PosterStatus = 0;
                             } else {
                                 console.log("刮削电影失败: " + res.msg);
                             }
@@ -219,14 +236,14 @@
                 },
 
                 ScrapeTv(index, videoid, tmdbId, seasonId) {
-                    fetch(this.apiAddr + "/api/scrape?id=" + videoid + "&tmdbid=" + tmdbId + "&videoType=" + this.currentType + "&seasonId=" + seasonId, this.requestOptions)
+                    fetch(this.apiAddr + "/api/scrape?id=" + videoid + "&tmdbid=" + tmdbId + "&videoType=" + this.currentType + "&seasonId=" + seasonId + "&forceUseOnlineTvMeta=" + this.forceUseOnlineTvMeta, this.requestOptions)
                         .then((res) => res.json())
                         .then((res) => {
                             if (res.success) {
                                 console.log("刮削电视剧成功, 标题: " + res.msg);
-                                this.unCompletedVideosLists[index].scrapedTitle = res.msg;
-                                this.unCompletedVideosLists[index].NfoStatus = 0;
-                                this.unCompletedVideosLists[index].PosterStatus = 0;
+                                this.videosLists[index].scrapedTitle = res.msg;
+                                this.videosLists[index].NfoStatus = 0;
+                                this.videosLists[index].PosterStatus = 0;
                             } else {
                                 console.log("刮削电视剧失败: " + res.msg);
                             }

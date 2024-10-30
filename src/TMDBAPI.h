@@ -25,7 +25,7 @@ public:
 
     bool ScrapeMovie(VideoInfo& videoInfo, int movieID) override;
 
-    bool ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId) override;
+    bool ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId, bool forceUseOnlineTvMeta = false) override;
 
     bool UpdateTV(VideoInfo& videoInfo);
 
@@ -51,7 +51,7 @@ private:
 
     bool GetTVDetail(int tmdbId, int seasonId, VideoDetail& videoDetail);
 
-    bool GetSeasonDetail(int tmdbId, int seasonNum, VideoDetail& videoDetail);
+    bool GetSeasonDetail(int tmdbId, int seasonNum, VideoDetail& videoDetail, bool forceUseOnlineTvMeta);
 
     bool GetMovieCredits(int tmdbId, VideoDetail& videoDetail);
 

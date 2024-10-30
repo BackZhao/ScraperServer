@@ -145,6 +145,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
         }
     };
 
+    // TODO: 合并检测图片的lambda
     auto CheckPoster = [&](const std::string& posterName) {
         if (Poco::File(posterName).exists()) {
             videoInfo.posterStatus = IsJpgCompleted(posterName) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
@@ -277,6 +278,40 @@ std::string DataSource::GetLargestFile(const std::string& path)
     return videos.back().first;
 }
 
+void DataSource::GetVideoPathesFromMovieSet(const std::string& path, std::vector<VideoInfo>& videoInfos)
+{
+    // TODO: 还是需要处理成Kodi的电影集, 否则无法刮削不含子目录的情况
+    Poco::DirectoryIterator iter(path);
+    Poco::DirectoryIterator end;
+
+    std::vector<std::string> videoPathes;
+    while (iter != end && !m_isCancel) {
+        // 当前为目录, 目录下没有视频文件, 但是有多个子目录, 子目录内有视频文件, 则判定为电影集,
+        // 收录每个子目录内的最大视频文件
+        if (iter->isDirectory()) { // 收录视频文件
+            const std::string& largestVideoFile = GetLargestFile(iter->path());
+            if (!largestVideoFile.empty()) {
+                LOG_TRACE("Found videos: {}", largestVideoFile);
+                videoPathes.push_back(largestVideoFile);
+            }
+        }
+        ++iter;
+    }
+
+    // 如果扫描到的视频个数不足两个, 则认为该目录并非电影集
+    if (videoPathes.size() <= 1) {
+        LOG_WARN("Only {} videos accepted, not treated as movie set: {}", videoPathes.size(), path);
+    } else {
+        // TODO: 适配Kodi电影集元数据, 目前均视为独立电影, 单独刮削
+        for (auto videoPath : videoPathes) {
+            LOG_TRACE("Found movie (in movie set): {}", videoPath);
+            VideoInfo videoInfo(MOVIE, videoPath);
+            videoInfo.videoFiletype = IN_FOLDER;
+            videoInfos.push_back(videoInfo);
+        }
+    }
+}
+
 bool DataSource::ScanMovie(const std::vector<std::string>& paths,
                           std::vector<VideoInfo>&         videoInfos,
                           std::atomic<std::size_t>&       processedVideoNum,
@@ -292,11 +327,14 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
             continue;
         }
 
-        Poco::DirectoryIterator iter(moviePath); // TODO: 没有处理路径不存在的问题
+        Poco::DirectoryIterator iter(moviePath);
         Poco::DirectoryIterator end;
         while (iter != end && !m_isCancel) {
             LOG_TRACE("Scanning file/directory {} ...", iter->path());
-            // 电影的最大扫描深度为1
+            // 电影的扫描逻辑:
+            // 1. 当前为视频文件, 直接收录
+            // 2. 当前为目录, 目录下有视频文件, 收录最大的视频文件(为了排除samples等短片)
+            // 3. 当前为目录, 目录下没有视频文件, 但是有多个子目录, 子目录内有视频文件, 则判定为电影集, 收录每个子目录内的最大视频文件
             if (iter->isFile()) { // 视频文件直接添加
                 if (IsVideo(iter.path().getExtension())) {
                     LOG_TRACE("Found movie: {}", iter->path());
@@ -304,13 +342,15 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
                     videoInfo.videoFiletype = NO_FOLDER;
                     videoInfos.push_back(videoInfo);
                 }
-            } else if (iter->isDirectory()) { // 仅添加目录下的最大视频文件
+            } else if (iter->isDirectory()) { // 收录视频文件
                 const std::string& largestVideoFile = GetLargestFile(iter->path());
                 if (!largestVideoFile.empty()) {
                     LOG_TRACE("Found movie: {}", largestVideoFile);
                     VideoInfo videoInfo(MOVIE, largestVideoFile);
                     videoInfo.videoFiletype = IN_FOLDER;
                     videoInfos.push_back(videoInfo);
+                } else {
+                    GetVideoPathesFromMovieSet(iter->path(), videoInfos);
                 }
             }
             ++iter;
@@ -406,6 +446,8 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
         while (iter != end && !m_isCancel) {
             // 电视剧仅添加一级目录
             if (iter->isDirectory()) {
+                // TODO: 处理电视剧合集
+
                 VideoInfo videoInfo(TV, iter->path());
                 videoInfo.videoFiletype = IN_FOLDER;
                 videoInfos.push_back(videoInfo);

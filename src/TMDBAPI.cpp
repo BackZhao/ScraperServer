@@ -302,7 +302,7 @@ bool TMDBAPI::GetTVDetail(int tmdbId, int seasonId, VideoDetail& videoDetail)
     }
 }
 
-bool TMDBAPI::GetSeasonDetail(int tmdbId, int seasonId, VideoDetail& videoDetail)
+bool TMDBAPI::GetSeasonDetail(int tmdbId, int seasonId, VideoDetail& videoDetail, bool forceUseOnlineTvMeta)
 {
     std::stringstream sS;
     // 拼接访问的URL
@@ -331,7 +331,7 @@ bool TMDBAPI::GetSeasonDetail(int tmdbId, int seasonId, VideoDetail& videoDetail
             return false;
         }
         auto episodesJsonArr = jsonPtr->getArray("episodes");
-        if (!WriteEpisodeNfo(episodesJsonArr, videoDetail.episodePaths, seasonId)) {
+        if (!WriteEpisodeNfo(episodesJsonArr, videoDetail.episodePaths, seasonId, forceUseOnlineTvMeta)) {
             LOG_ERROR("Write episode nfos failed!");
             return false;
         } else {
@@ -625,7 +625,7 @@ bool TMDBAPI::UpdateTV(VideoInfo& videoInfo)
     }
 
     std::stringstream seasonDetailStream;
-    if (!GetSeasonDetail(videoInfo.videoDetail.uniqueid.at("tmdb"), videoInfo.videoDetail.seasonNumber, videoInfo.videoDetail)) {
+    if (!GetSeasonDetail(videoInfo.videoDetail.uniqueid.at("tmdb"), videoInfo.videoDetail.seasonNumber, videoInfo.videoDetail, true)) {
         LOG_ERROR("Get season detail failed for {}", videoInfo.videoPath);
         return false;
     }
@@ -692,7 +692,7 @@ bool TMDBAPI::ScrapeMovie(VideoInfo& videoInfo, int movieID)
     return true;
 }
 
-bool TMDBAPI::ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId)
+bool TMDBAPI::ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId, bool forceUseOnlineTvMeta)
 {
     // 清空所有的矢量, 刮削时矢量元素的添加均为push_back()
     videoInfo.videoDetail.genre.clear();
@@ -711,7 +711,7 @@ bool TMDBAPI::ScrapeTV(VideoInfo& videoInfo, int tvId, int seasonId)
 
     videoInfo.videoDetail.uniqueid["tmdb"] = tvId;
 
-    if (!GetSeasonDetail(tvId, seasonId, videoInfo.videoDetail)) {
+    if (!GetSeasonDetail(tvId, seasonId, videoInfo.videoDetail, forceUseOnlineTvMeta)) {
         m_lastErrCode = GET_SEASON_DETAIL_FAILED;
         return false;
     }
