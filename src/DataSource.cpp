@@ -413,20 +413,46 @@ bool CompareEpisodes(const std::string &a, const std::string &b) {
     return episodeA < episodeB;
 }
 
-bool DataSource::ScanTv(const std::vector<std::string>& paths,
-                       std::vector<VideoInfo>&         videoInfos,
-                       std::atomic<std::size_t>&       processedVideoNum,
-                       bool                            forceDetectHdr)
+void DataSource::GetVideoPathesFromTVSet(const std::string& path, std::vector<VideoInfo>& videoInfos)
 {
-    // 清除历史数据
-    processedVideoNum = 0;
+    // TODO: 最好按照剧集合集来处理, 当前按照独立的剧集来处理的
+    Poco::DirectoryIterator iter(path);
+    Poco::DirectoryIterator end;
 
-    // 获取电视剧剧集的路径, 即添加给定目录下所有的视频文件
-    auto GetEpisodePaths = [&](VideoInfo& videoInfo) {
-        Poco::DirectoryIterator iter(videoInfo.videoPath);
+    std::vector<VideoInfo> tempVideoInfos;
+    while (iter != end && !m_isCancel) {
+        // 当前为目录, 目录下没有视频文件, 但是有多个子目录, 子目录内有视频文件, 则判定为电视剧合集
+        if (iter->isDirectory()) { 
+            auto episodePaths = GetEpisodePaths(iter->path());
+            if (!episodePaths.empty()) {
+                VideoInfo videoInfo(TV, iter->path());
+                videoInfo.videoDetail.episodePaths = episodePaths;
+                tempVideoInfos.push_back(videoInfo);
+            } else {
+                LOG_WARN("No episodes found in {}", iter->path());
+            }
+        }
+        ++iter;
+    }
+
+    // 如果扫描到的视频个数不足两个, 则认为该目录并非电影集
+    if (tempVideoInfos.size() <= 1) {
+        LOG_WARN("Only {} tv shows accepted, not treated as tv set: {}", tempVideoInfos.size(), path);
+    } else {
+        for (auto videoInfo : tempVideoInfos) {
+            LOG_TRACE("Found tv show (in tv set): {}", videoInfo.videoPath);
+            videoInfos.push_back(videoInfo);
+        }
+    }
+}
+
+std::vector<std::string> DataSource::GetEpisodePaths(const std::string& tvPath)
+{
+
+        Poco::DirectoryIterator iter(tvPath);
         Poco::DirectoryIterator end;
 
-        auto& episodePaths = videoInfo.videoDetail.episodePaths;
+        std::vector<std::string> episodePaths;
         while (iter != end && !m_isCancel) {
             // LOG_TRACE("Scanning for episodes: {}", iter->path());
             if (IsVideo(iter.path().getExtension())) {
@@ -435,7 +461,16 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
             ++iter;
         }
         std::sort(episodePaths.begin(), episodePaths.end(), CompareEpisodes);
-    };
+        return episodePaths;
+}
+
+bool DataSource::ScanTv(const std::vector<std::string>& paths,
+                       std::vector<VideoInfo>&         videoInfos,
+                       std::atomic<std::size_t>&       processedVideoNum,
+                       bool                            forceDetectHdr)
+{
+    // 清除历史数据
+    processedVideoNum = 0;
 
     // 遍历所有电视剧数据源
     const auto& tvPaths = paths;
@@ -451,10 +486,15 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
             // 电视剧仅添加一级目录
             if (iter->isDirectory()) {
                 // TODO: 处理电视剧合集
-
-                VideoInfo videoInfo(TV, iter->path());
-                videoInfo.videoFiletype = IN_FOLDER;
-                videoInfos.push_back(videoInfo);
+                auto episodePaths = GetEpisodePaths(iter->path());
+                if (!episodePaths.empty()) {
+                    VideoInfo videoInfo(TV, iter->path());
+                    videoInfo.videoDetail.episodePaths = episodePaths;
+                    videoInfo.videoFiletype = IN_FOLDER;
+                    videoInfos.push_back(videoInfo);
+                } else {
+                    GetVideoPathesFromTVSet(iter->path(), videoInfos);
+                }
             }
             ++iter;
         }
@@ -464,7 +504,6 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
         if (m_isCancel) {
             return false;
         }
-        GetEpisodePaths(videoInfo);
         CheckVideoStatus(videoInfo, forceDetectHdr);
         processedVideoNum++;
     }

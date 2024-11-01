@@ -31,7 +31,17 @@ private:
     static bool IsJpgCompleted(const std::string& posterPath);
     static bool IsPNGCompleted(const std::string& posterPath);
 
+    /**
+     * @brief 获取电视剧剧集的路径, 即添加给定目录下所有的视频文件
+     * 
+     * @param tvPath 
+     * @return std::vector<std::string> 
+     */
+    static std::vector<std::string> GetEpisodePaths(const std::string& tvPath);
+
     static void GetVideoPathesFromMovieSet(const std::string& path, std::vector<VideoInfo>& videoInfos);
+
+    static void GetVideoPathesFromTVSet(const std::string& path, std::vector<VideoInfo>& videoInfos);
 
     static std::string GetLargestFile(const std::string& path);
 
