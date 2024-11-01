@@ -406,6 +406,10 @@ bool CompareEpisodes(const std::string &a, const std::string &b) {
         return seasonA < seasonB;
     }
     // 如果季相同，比较集
+    // 如果集数相同, 则按照字母序排序
+    if (episodeA == episodeB) {
+        return a < b;
+    }
     return episodeA < episodeB;
 }
 
