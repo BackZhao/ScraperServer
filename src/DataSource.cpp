@@ -196,7 +196,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             CheckPoster(videoInfo.posterPath);
             CheckFanart(videoInfo.fanartPath);
             CheckClearlogo(videoInfo.clearlogoPath);
-            if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
+            if (forceDetectHdr) {
                 GetHdrFormat(videoInfo);
             } else {
                 videoInfo.hdrType = VideoRangeType::SDR;
@@ -216,7 +216,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             CheckFanart(videoInfo.fanartPath);
             CheckClearlogo(videoInfo.clearlogoPath);
             CheckEpisodes();
-            if (forceDetectHdr || videoInfo.nfoStatus != FILE_FORMAT_MATCH) {
+            if (forceDetectHdr) {
                 GetHdrFormat(videoInfo);
             } else {
                 videoInfo.hdrType = VideoRangeType::SDR;
@@ -370,8 +370,9 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
 }
 
 // generate by ChatGPT
-std::pair<int, int> ExtractSeasonAndEpisode(const std::string &name) {
-    std::regex pattern(R"([sS](\d+)[eE](\d+))");
+std::pair<int, int> ExtractSeasonAndEpisode(const std::string& name)
+{
+    std::regex  pattern(R"([sS](\d+)[eE](\d+))");
     std::smatch match;
 
     if (std::regex_search(name, match, pattern)) {
@@ -381,13 +382,14 @@ std::pair<int, int> ExtractSeasonAndEpisode(const std::string &name) {
     return {-1, -1};
 }
 
-bool CompareEpisodes(const std::string &a, const std::string &b) {
+bool CompareEpisodes(const std::string& a, const std::string& b)
+{
     std::pair<int, int> seasonEpisodeA = ExtractSeasonAndEpisode(a);
     std::pair<int, int> seasonEpisodeB = ExtractSeasonAndEpisode(b);
 
-    int seasonA = seasonEpisodeA.first;
+    int seasonA  = seasonEpisodeA.first;
     int episodeA = seasonEpisodeA.second;
-    int seasonB = seasonEpisodeB.first;
+    int seasonB  = seasonEpisodeB.first;
     int episodeB = seasonEpisodeB.second;
 
     // 如果无法解析，直接返回 false，保持原有顺序
@@ -411,6 +413,22 @@ bool CompareEpisodes(const std::string &a, const std::string &b) {
         return a < b;
     }
     return episodeA < episodeB;
+}
+
+void SortEpisodes(std::vector<std::string>& episodePaths)
+{
+    if (episodePaths.empty()) {
+        return;
+    }
+
+    std::pair<int, int> seasonEpisodeA = ExtractSeasonAndEpisode(episodePaths.front());
+    if (seasonEpisodeA.first == -1 || seasonEpisodeA.second == -1) {
+        // 如果剧集命名不是SxxExx格式的, 则按照字母序排序
+        // TODO: 如果剧集包含的数字超过三位, 则仍然需要提取数字处理
+        std::sort(episodePaths.begin(), episodePaths.end());
+    } else {
+        std::sort(episodePaths.begin(), episodePaths.end(), CompareEpisodes);
+    }
 }
 
 void DataSource::GetVideoPathesFromTVSet(const std::string& path, std::vector<VideoInfo>& videoInfos)
@@ -448,20 +466,19 @@ void DataSource::GetVideoPathesFromTVSet(const std::string& path, std::vector<Vi
 
 std::vector<std::string> DataSource::GetEpisodePaths(const std::string& tvPath)
 {
+    Poco::DirectoryIterator iter(tvPath);
+    Poco::DirectoryIterator end;
 
-        Poco::DirectoryIterator iter(tvPath);
-        Poco::DirectoryIterator end;
-
-        std::vector<std::string> episodePaths;
-        while (iter != end && !m_isCancel) {
-            // LOG_TRACE("Scanning for episodes: {}", iter->path());
-            if (IsVideo(iter.path().getExtension())) {
-                episodePaths.push_back(iter->path());
-            }
-            ++iter;
+    std::vector<std::string> episodePaths;
+    while (iter != end && !m_isCancel) {
+        // LOG_TRACE("Scanning for episodes: {}", iter->path());
+        if (IsVideo(iter.path().getExtension())) {
+            episodePaths.push_back(iter->path());
         }
-        std::sort(episodePaths.begin(), episodePaths.end(), CompareEpisodes);
-        return episodePaths;
+        ++iter;
+    }
+    SortEpisodes(episodePaths);
+    return episodePaths;
 }
 
 bool DataSource::ScanTv(const std::vector<std::string>& paths,

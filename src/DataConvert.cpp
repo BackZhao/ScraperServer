@@ -134,7 +134,7 @@ bool VideoInfoToNfo(const VideoInfo&   videoInfo,
         parent->appendChild(ele);
     };
 
-    if (setHDRTitle && videoInfo.hdrType != VideoRangeType::SDR) {
+    if (setHDRTitle && videoInfo.hdrType != VideoRangeType::SDR && videoInfo.hdrType != VideoRangeType::UNKNOWN) {
         std::string title = videoInfo.videoDetail.title;
         std::string hdrTitle = VIDEO_RANGE_TYPE_TO_STR_MAP.at(videoInfo.hdrType);
         if (title.find(hdrTitle) == std::string::npos) {
