@@ -9,6 +9,7 @@
 #include <Poco/URI.h>
 #include <Poco/JSON/Parser.h>
 #include <Poco/StreamCopier.h>
+#include <string>
 
 #include "Config.h"
 #include "DataConvert.h"
@@ -274,8 +275,6 @@ bool TMDBAPI::ParseTVDetailsToVideoDetail(std::stringstream& sS, VideoDetail& vi
         videoDetail.countries.push_back(ISO_3611_CODE_TO_STR.at(code));
     }
 
-    videoDetail.premiered = jsonPtr->getValue<std::string>("first_air_date");
-
     auto studioJsonArrPtr = jsonPtr->getArray("production_companies");
     for (std::size_t i = 0; i < studioJsonArrPtr->size(); i++) {
         videoDetail.studio.push_back(studioJsonArrPtr->getObject(i)->getValue<std::string>("name"));
@@ -330,6 +329,7 @@ bool TMDBAPI::GetSeasonDetail(int tmdbId, int seasonId, VideoDetail& videoDetail
             m_lastErrCode = PARSE_SEASON_DETAIL_FAILED;
             return false;
         }
+        videoDetail.premiered = jsonPtr->getValue<std::string>("air_date");
         auto episodesJsonArr = jsonPtr->getArray("episodes");
         if (!WriteEpisodeNfo(episodesJsonArr, videoDetail.episodePaths, seasonId, forceUseOnlineTvMeta)) {
             LOG_ERROR("Write episode nfos failed!");
