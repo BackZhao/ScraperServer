@@ -270,7 +270,10 @@ bool ParseNfoToVideoInfo(VideoInfo& videoInfo)
     for (uint32_t i = 0; i < IdNodes->length(); i++) {
         Element* ele = dynamic_cast<Element *>(IdNodes->item(i));
         std::string idType        = ele->getAttribute("type");
-        // FIXME: IMDB的ID包含字母"tt"
+        // FIXME: IMDB的ID包含字母"tt", 暂时只解析"themoviedb"的ID
+        if (idType != "tmdb") {
+            continue;
+        }
         videoInfo.videoDetail.uniqueid[idType] = std::stoi(ele->innerText());
     }
 
