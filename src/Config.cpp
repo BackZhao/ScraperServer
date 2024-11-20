@@ -41,6 +41,7 @@ void Config::GetConfFile()
 void Config::SetPort(uint16_t portNum)
 {
     m_appConf.networkConf.listenPort = portNum;
+    m_portSet = true;
 }
 
 void Config::SetConfFile(const std::string& confFile)
@@ -159,7 +160,7 @@ bool Config::ParseConfFile()
         m_appConf.apiConf.apiKey = apiConfJson->getValue<std::string>("APIKey");
 
         auto networkConfJson = jsonPtr->getObject("Network");
-        if (m_appConf.networkConf.listenPort != 0) {
+        if (m_portSet) {
             LOG_WARN("HTTP listen port is specified by cli, ignore value in config file.");
         } else {
             m_appConf.networkConf.listenPort =

@@ -212,8 +212,8 @@ private:
      */
     Config()
     {
+        m_portSet                         = false;
         m_appConf.isAuto                  = false;
-        m_appConf.networkConf.listenPort  = 0;
         m_appConf.logLevel                = 2; // spdlog::level::info
         m_appConf.apiConf.downloadTimeout = 15;
         m_appConf.apiConf.jsonTimeout     = 5;
@@ -227,6 +227,7 @@ private:
 
 private:
 
+    bool        m_portSet;   // 端口号是否被设置(命令行参数指定)
     AppConf     m_appConf;   // 程序的配置
     std::string m_confFile;  // 配置文件的路径
     std::mutex  m_writeLock; // 保存配置文件的写入锁
