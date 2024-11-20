@@ -8,6 +8,7 @@
 
 #include "ApiManager.h"
 #include "Config.h"
+#include "Control.h"
 #include "DataSource.h"
 #include "HttpServer.h"
 #include "Logger.h"
@@ -17,7 +18,13 @@
 
 int main(int argc, char* argv[])
 {
-    // 解析命令行参数
+    // 如果是控制命令
+    if (Control::isCtlCmd(argc, argv)) {
+        Control control(argc, argv);
+        return control.ProcessCtl() ? 0 : 1;
+    }
+
+    // 如果不是控制命令, 解析命令行参数
     Option option(argc, argv);
     int    ret = option.Process();
     if (ret <= 0) {

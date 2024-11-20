@@ -66,6 +66,7 @@ void ApiRequestHandler::handleRequest(HTTPServerRequest& request, HTTPServerResp
         {"/api/refreshResult", std::bind(&ApiManager::RefreshResult, &ApiManager::Instance(), _1, _2)},
         {"/api/interlog", std::bind(&ApiManager::InterLog, &ApiManager::Instance(), _1, _2)},
         {"/api/version", std::bind(&ApiManager::Version, &ApiManager::Instance(), _1, _2)},
+        {"/api/quit", std::bind(&ApiManager::Quit, &ApiManager::Instance(), _1, _2)},
     };
 
     Poco::URI uri(request.getURI());

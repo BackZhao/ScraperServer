@@ -243,6 +243,7 @@ add_executable(Demo
   src/DataSource.cpp
   src/ResourceManager.cpp
   src/TMDBAPI.cpp
+  src/Control.cpp
   )
 target_link_libraries(Demo
   PRIVATE
@@ -267,6 +268,7 @@ add_executable(ScraperServer
   src/DataSource.cpp
   src/ResourceManager.cpp
   src/TMDBAPI.cpp
+  src/Control.cpp
   )
 target_link_libraries(ScraperServer
   PRIVATE

@@ -17,10 +17,10 @@ void HTTPServerApp::AutoUpdate()
 
     LOG_INFO("Auto update interval: {}s", Config::Instance().GetAutoInterval());
 
-    while (m_signum.load() == -1) {
+    while (m_signum.load() == -1 && !ApiManager::Instance().IsQuitting()) {
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {
-            ApiManager::Instance().ProcessScan(TV, true);
+            ApiManager::Instance().ProcessScan(TV, false);
             ApiManager::Instance().AutoUpdateTV();
             lastUpdateTime = std::chrono::steady_clock::now();
         }
@@ -64,12 +64,19 @@ int HTTPServerApp::run()
     signal(SIGINT, SignalHandler);
     signal(SIGTERM, SignalHandler);
     // 等待捕获信号
-    while (m_signum.load() == -1) {
+    while (m_signum.load() == -1 && !ApiManager::Instance().IsQuitting()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    if (ApiManager::Instance().IsQuitting()) {
+        LOG_INFO("Quit api recieved, quiting...");
+    } else {
+        LOG_INFO("Signal recieved: {}, quiting...", m_signum.load());
     }
 
     // 回收线程资源
     if (Config::Instance().IsAuto()) {
+        LOG_INFO("Recycle the auto update thread...");
         m_autoUpdateThread.join();
     }
 

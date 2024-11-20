@@ -1,9 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <iostream>
 #include <mutex>
-#include <thread>
 
 #include <Poco/JSON/Object.h>
 #include <Poco/LocalDateTime.h>
@@ -86,6 +86,8 @@ public:
 
     void ScanAll();
 
+    bool IsQuitting();
+
     void ProcessScan(VideoType videoType, bool forceDetectHdr);
     void Scan(const Poco::JSON::Object &param, std::ostream &out);
     void ScanResult(const Poco::JSON::Object&, std::ostream &out);
@@ -93,6 +95,7 @@ public:
     void Detail(const Poco::JSON::Object &param, std::ostream &out);
     void Scrape(const Poco::JSON::Object &param, std::ostream &out);
     void Refresh(const Poco::JSON::Object &param, std::ostream &out);
+    void Quit(const Poco::JSON::Object &, std::ostream &out);
     void AutoUpdateTV();
 
     void ProcessRefresh(VideoType videoType);
@@ -140,4 +143,6 @@ private:
     std::map<VideoType, std::vector<VideoInfo>>   m_videoInfos;
     std::map<VideoType, ScanInfo>                 m_scanInfos;
     std::map<VideoType, RefreshInfo>              m_refreshInfos;
+
+    std::atomic<bool> m_isQuitting{false}; // 是否正在退出
 };

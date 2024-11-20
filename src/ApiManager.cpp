@@ -522,3 +522,15 @@ void ApiManager::Version(const Poco::JSON::Object &, std::ostream &out)
     jsonObj.set("version", VERSION);
     jsonObj.stringify(out);
 }
+
+void ApiManager::Quit(const Poco::JSON::Object &, std::ostream &out)
+{
+    Poco::JSON::Object jsonObj;
+    FillWithResponseJson(out, true, "Server is quitting...");
+    m_isQuitting.store(true);
+}
+
+bool ApiManager::IsQuitting()
+{
+    return m_isQuitting.load();
+}
