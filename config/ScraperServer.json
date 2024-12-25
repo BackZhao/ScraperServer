@@ -40,5 +40,6 @@
         "TVs": [
             "/data/TVs"
         ]
-    }
+    },
+    "ffprobePath": "FFPROBE-PATH"
 }

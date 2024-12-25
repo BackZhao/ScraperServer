@@ -1,8 +1,5 @@
 #include "DataSource.h"
 
-#include <Poco/File.h>
-#include <Poco/Path.h>
-#include <Poco/SortedDirectoryIterator.h>
 #include <algorithm>
 #include <fstream>
 #include <functional>
@@ -14,6 +11,8 @@
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/DOM/Document.h>
 #include <Poco/DirectoryIterator.h>
+#include <Poco/File.h>
+#include <Poco/Path.h>
 #include <Poco/SortedDirectoryIterator.h>
 
 #include "DataConvert.h"
@@ -23,7 +22,8 @@
 using namespace Poco::XML;
 using Poco::AutoPtr;
 
-bool DataSource::m_isCancel = false;
+bool DataSource::m_isCancel     = false;
+bool DataSource::m_ffprobeReady = false;
 
 bool DataSource::IsVideo(const std::string& suffix)
 {
@@ -80,7 +80,8 @@ bool DataSource::IsJpgCompleted(const std::string& posterName)
 
         if (std::memcmp(firstTwoBytes.data(), SOI.data(), SOI.size()) != 0 ||
             std::memcmp(lastTwoBytes.data(), EOI.data(), EOI.size()) != 0) {
-            LOG_ERROR("{} SOI({:#02X} {:#02X})/EOI({:#02X} {:#02X}) unmatched! JPEG signature: SOI(0xFF 0xD8)/EOI(0xFF 0xD9)!",
+            LOG_ERROR("{} SOI({:#02X} {:#02X})/EOI({:#02X} {:#02X}) unmatched! JPEG signature: SOI(0xFF 0xD8)/EOI(0xFF "
+                      "0xD9)!",
                       posterName,
                       firstTwoBytes[0],
                       firstTwoBytes[1],
@@ -127,7 +128,7 @@ bool DataSource::IsPNGCompleted(const std::string& posterName)
 
 void GetHdrFormat(VideoInfo& videoInfo)
 {
-    videoInfo.hdrType =  HDRToolKit::GetHDRTypeFromFile(videoInfo.videoPath);
+    videoInfo.hdrType = HDRToolKit::GetHDRTypeFromFile(videoInfo.videoPath);
     LOG_DEBUG("VideoRangeType: {}, {}", VIDEO_RANGE_TYPE_TO_STR_MAP.at(videoInfo.hdrType), videoInfo.videoPath);
 }
 
@@ -166,8 +167,9 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
 
     auto CheckClearlogo = [&](const std::string& clearlogoPath) {
         if (Poco::File(clearlogoPath).exists()) {
-            videoInfo.clearlogoStatus = IsPNGCompleted(clearlogoPath) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
-            videoInfo.clearlogoPath   = clearlogoPath;
+            videoInfo.clearlogoStatus =
+                IsPNGCompleted(clearlogoPath) == true ? FILE_FORMAT_MATCH : FILE_FORMAT_MISMATCH;
+            videoInfo.clearlogoPath = clearlogoPath;
         } else {
             videoInfo.clearlogoStatus = FILE_NOT_FOUND;
         }
@@ -178,7 +180,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
         for (const auto& episodePath : episodePaths) {
             const std::string& baseNameWithDir =
                 Poco::Path(episodePath).parent().toString() + Poco::Path(episodePath).getBaseName();
-            if (Poco::File(baseNameWithDir + ".nfo").exists() &&  IsNfoFormatMatch(baseNameWithDir + ".nfo")) {
+            if (Poco::File(baseNameWithDir + ".nfo").exists() && IsNfoFormatMatch(baseNameWithDir + ".nfo")) {
                 videoInfo.videoDetail.episodeNfoCount++;
             }
         }
@@ -188,15 +190,15 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
         case MOVIE: {
             const std::string& baseNameWithDir =
                 Poco::Path(videoInfo.videoPath).parent().toString() + Poco::Path(videoInfo.videoPath).getBaseName();
-            videoInfo.nfoPath = baseNameWithDir + ".nfo";
-            videoInfo.posterPath = baseNameWithDir + "-poster.jpg";
-            videoInfo.fanartPath = baseNameWithDir + "-fanart.jpg";
+            videoInfo.nfoPath       = baseNameWithDir + ".nfo";
+            videoInfo.posterPath    = baseNameWithDir + "-poster.jpg";
+            videoInfo.fanartPath    = baseNameWithDir + "-fanart.jpg";
             videoInfo.clearlogoPath = baseNameWithDir + "-clearlogo.jpg";
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
             CheckFanart(videoInfo.fanartPath);
             CheckClearlogo(videoInfo.clearlogoPath);
-            if (forceDetectHdr) {
+            if (m_ffprobeReady && forceDetectHdr) {
                 GetHdrFormat(videoInfo);
             } else {
                 videoInfo.hdrType = VideoRangeType::SDR;
@@ -216,7 +218,7 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
             CheckFanart(videoInfo.fanartPath);
             CheckClearlogo(videoInfo.clearlogoPath);
             CheckEpisodes();
-            if (forceDetectHdr) {
+            if (m_ffprobeReady && forceDetectHdr) {
                 GetHdrFormat(videoInfo);
             } else {
                 videoInfo.hdrType = VideoRangeType::SDR;
@@ -242,7 +244,8 @@ bool DataSource::IsMetaCompleted(const VideoInfo& videoInfo)
     }
 
     // 电视剧还需要剧集的NFO完整
-    if (videoInfo.videoType == TV && videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
+    if (videoInfo.videoType == TV &&
+        videoInfo.videoDetail.episodeNfoCount != videoInfo.videoDetail.episodePaths.size()) {
         return false;
     }
 
@@ -252,8 +255,8 @@ bool DataSource::IsMetaCompleted(const VideoInfo& videoInfo)
 std::string DataSource::GetLargestFile(const std::string& path)
 {
     // 遍历文件
-    Poco::DirectoryIterator               iter(path);
-    Poco::DirectoryIterator               end;
+    Poco::DirectoryIterator                     iter(path);
+    Poco::DirectoryIterator                     end;
     std::string                                 largestVideoFile;
     std::vector<std::pair<std::string, size_t>> videos;
     while (iter != end) {
@@ -313,9 +316,9 @@ void DataSource::GetVideoPathesFromMovieSet(const std::string& path, std::vector
 }
 
 bool DataSource::ScanMovie(const std::vector<std::string>& paths,
-                          std::vector<VideoInfo>&         videoInfos,
-                          std::atomic<std::size_t>&       processedVideoNum,
-                          bool                            forceDetectHdr)
+                           std::vector<VideoInfo>&         videoInfos,
+                           std::atomic<std::size_t>&       processedVideoNum,
+                           bool                            forceDetectHdr)
 {
     // 清除历史数据
     processedVideoNum = 0;
@@ -334,7 +337,8 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
             // 电影的扫描逻辑:
             // 1. 当前为视频文件, 直接收录
             // 2. 当前为目录, 目录下有视频文件, 收录最大的视频文件(为了排除samples等短片)
-            // 3. 当前为目录, 目录下没有视频文件, 但是有多个子目录, 子目录内有视频文件, 则判定为电影集, 收录每个子目录内的最大视频文件
+            // 3. 当前为目录, 目录下没有视频文件, 但是有多个子目录, 子目录内有视频文件, 则判定为电影集,
+            // 收录每个子目录内的最大视频文件
             if (iter->isFile()) { // 视频文件直接添加
                 if (IsVideo(iter.path().getExtension())) {
                     LOG_TRACE("Found movie: {}", iter->path());
@@ -440,7 +444,7 @@ void DataSource::GetVideoPathesFromTVSet(const std::string& path, std::vector<Vi
     std::vector<VideoInfo> tempVideoInfos;
     while (iter != end && !m_isCancel) {
         // 当前为目录, 目录下没有视频文件, 但是有多个子目录, 子目录内有视频文件, 则判定为电视剧合集
-        if (iter->isDirectory()) { 
+        if (iter->isDirectory()) {
             auto episodePaths = GetEpisodePaths(iter->path());
             if (!episodePaths.empty()) {
                 VideoInfo videoInfo(TV, iter->path());
@@ -482,9 +486,9 @@ std::vector<std::string> DataSource::GetEpisodePaths(const std::string& tvPath)
 }
 
 bool DataSource::ScanTv(const std::vector<std::string>& paths,
-                       std::vector<VideoInfo>&         videoInfos,
-                       std::atomic<std::size_t>&       processedVideoNum,
-                       bool                            forceDetectHdr)
+                        std::vector<VideoInfo>&         videoInfos,
+                        std::atomic<std::size_t>&       processedVideoNum,
+                        bool                            forceDetectHdr)
 {
     // 清除历史数据
     processedVideoNum = 0;
@@ -507,7 +511,7 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
                 if (!episodePaths.empty()) {
                     VideoInfo videoInfo(TV, iter->path());
                     videoInfo.videoDetail.episodePaths = episodePaths;
-                    videoInfo.videoFiletype = IN_FOLDER;
+                    videoInfo.videoFiletype            = IN_FOLDER;
                     videoInfos.push_back(videoInfo);
                 } else {
                     GetVideoPathesFromTVSet(iter->path(), videoInfos);
@@ -538,6 +542,8 @@ bool DataSource::Scan(VideoType                       videoType,
     LOG_DEBUG("Scanning for type {}...", VIDEO_TYPE_TO_STR.at(videoType));
 
     videoInfos.clear();
+
+    m_ffprobeReady = HDRToolKit::Checkffprobe();
 
     /* clang-format off */
     // 扫描视频的函数映射表

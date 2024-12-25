@@ -13,7 +13,6 @@
 #include <Poco/StreamCopier.h>
 #include <Poco/XML/XMLWriter.h>
 
-#include "Config.h"
 #include "HDRToolKit.h"
 #include "Logger.h"
 

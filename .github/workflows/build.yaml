@@ -4,19 +4,17 @@ on:
   push:
     branches:
       - master
+      - jellyfin-ffmpeg
 
 jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout codes
         uses: actions/checkout@v3
-
-      - name: Install FFMPEG
-        run: sudo apt install -y ffmpeg
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@master

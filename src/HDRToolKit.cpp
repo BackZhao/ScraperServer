@@ -1,29 +1,76 @@
 #include "HDRToolKit.h"
 
-#include <map>
+#include <Poco/JSON/Array.h>
+#include <Poco/JSON/Object.h>
+#include <sstream>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/dovi_meta.h>
-#include <libavutil/log.h>
-}
+#include <Poco/Exception.h>
+#include <Poco/File.h>
+#include <Poco/JSON/Parser.h>
+#include <Poco/Pipe.h>
+#include <Poco/PipeStream.h>
+#include <Poco/Process.h>
+#include <Poco/StreamCopier.h>
 
+#include "Config.h"
 #include "Logger.h"
 
-const std::size_t DOLBY_CONF_SIDE_DATA_SIZE = 8; // 杜比配置文件的数据大小
+const Poco::Process::Args FFPROBE_CHECK_ARGS            = {"-version"};      // 检测ffprobe的命令行参数
+const std::string         FFRPOBE_CHECK_OUTPUT_KEYWORDS = "ffprobe version"; // 检测ffprobe的输出关键字
+const Poco::Process::Args FFPROBE_ANALYZE_ARGS          = {"-analyzeduration",
+                                                           "200M",
+                                                           "-probesize",
+                                                           "1G",
+                                                           "-threads",
+                                                           "0",
+                                                           "-v",
+                                                           "error",
+                                                           "-print_format",
+                                                           "json",
+                                                           "-show_streams",
+                                                           "-show_format",
+                                                           "-i",
+                                                           "file:"}; // 检测ffprobe的输出关键字
+
+bool HDRToolKit::Checkffprobe()
+{
+    const std::string &ffprobePath = Config::Instance().GetffprobePath();
+
+    if (ffprobePath.empty()) {
+        LOG_ERROR("ffprobe path is empty!");
+        return false;
+    }
+
+    if (!Poco::File(ffprobePath).exists()) {
+        LOG_ERROR("Given ffprobe path doesn't exist: {}", ffprobePath);
+        return false;
+    }
+
+    // 通过检查版本号命令参数的输出, 判断是否为ffprobe
+    LOG_INFO("Checking ffprobe {}...", ffprobePath);
+    Poco::Pipe            outPipe;
+    Poco::ProcessHandle   ph = Poco::Process::launch(ffprobePath, FFPROBE_CHECK_ARGS, nullptr, &outPipe, nullptr);
+    Poco::PipeInputStream inputStream(outPipe);
+    std::stringstream     outStream;
+    Poco::StreamCopier::copyStream(inputStream, outStream);
+    ph.wait();
+    if (outStream.str().find(FFRPOBE_CHECK_OUTPUT_KEYWORDS) != 0) {
+        LOG_ERROR("ffprobe check output not match keyword: {}, actual output: \n{}",
+                  FFRPOBE_CHECK_OUTPUT_KEYWORDS,
+                  outStream.str());
+        return false;
+    }
+
+    LOG_INFO("ffprobe {} works fine!", ffprobePath);
+    return true;
+}
 
 // 参考代码仓库: https://github.com/jellyfin/jellyfin.git
 // 参考代码文件: MediaBrowser.Model/Entities/MediaStream.cs
 // 参考代码函数: public (VideoRange VideoRange, VideoRangeType VideoRangeType) GetVideoColorRange()
-VideoRangeType HDRToolKit::GetHDRTypeByDolbyConf(const uint8_t *data, std::size_t dataSize)
+VideoRangeType HDRToolKit::GetHDRTypeByDolbyConf(int dv_profile, int dv_bl_signal_compatibility_id)
 {
-    if (dataSize != DOLBY_CONF_SIDE_DATA_SIZE) {
-        return VideoRangeType::UNKNOWN;
-    }
-
-    const AVDOVIDecoderConfigurationRecord *dovi = reinterpret_cast<const AVDOVIDecoderConfigurationRecord *>(data);
-    switch (dovi->dv_profile) {
+    switch (dv_profile) {
         case 5: {
             return VideoRangeType::DOVI;
         }
@@ -37,7 +84,7 @@ VideoRangeType HDRToolKit::GetHDRTypeByDolbyConf(const uint8_t *data, std::size_
                 {4, VideoRangeType::DOVI_WITH_HLG},
                 {6, VideoRangeType::DOVI_WITH_HDR10},
             };
-            auto iter = dvCompatID2HDRType.find(dovi->dv_bl_signal_compatibility_id);
+            auto iter = dvCompatID2HDRType.find(dv_bl_signal_compatibility_id);
             if (iter != dvCompatID2HDRType.end()) {
                 return iter->second;
             } else {
@@ -52,104 +99,59 @@ VideoRangeType HDRToolKit::GetHDRTypeByDolbyConf(const uint8_t *data, std::size_
 
 VideoRangeType HDRToolKit::GetHDRTypeFromFile(const std::string &fileName)
 {
-    VideoRangeType hdrType = VideoRangeType::UNKNOWN;
+    const std::string &ffprobePath = Config::Instance().GetffprobePath();
+    LOG_DEBUG("Get hdr type for video {}...", fileName);
 
-    // 屏蔽ffmpeg告警
-    av_log_set_level(AV_LOG_ERROR);
-    avformat_network_init();
+    Poco::Pipe                 outPipe;
+    static Poco::Process::Args args      = FFPROBE_ANALYZE_ARGS;
+    args.back()                          = "file:" + fileName;
+    Poco::ProcessHandle   ffprobeProcHdl = Poco::Process::launch(ffprobePath, args, nullptr, &outPipe, nullptr);
+    Poco::PipeInputStream inputStream(outPipe);
 
-    AVFormatContext *format_ctx = NULL;
-    if (avformat_open_input(&format_ctx, fileName.c_str(), NULL, NULL) < 0) {
-        LOG_ERROR("Open file {} failed!", fileName);
+    Poco::JSON::Object::Ptr ffprobeJsonPtr;
+    try {
+        Poco::JSON::Parser jsonParser;
+        ffprobeJsonPtr = jsonParser.parse(inputStream).extract<Poco::JSON::Object::Ptr>();
+    } catch (Poco::Exception &e) {
+        LOG_ERROR("ffprobe output parsed failed as json: {}", e.displayText());
+        std::stringstream outStream;
+        Poco::StreamCopier::copyStream(inputStream, outStream);
+        LOG_ERROR("ffprobe output:\n{}", outStream.str());
+        ffprobeProcHdl.wait();
+    }
+
+    ffprobeProcHdl.wait();
+
+    Poco::JSON::Array::Ptr streams = ffprobeJsonPtr->getArray("streams");
+    if (streams.isNull()) {
+        LOG_WARN("No streams found in video {}", fileName);
         return VideoRangeType::UNKNOWN;
     }
-    
-    // 设置 analyzeduration 和 probesize
-    format_ctx->max_analyze_duration = 200000000LL; // 设置 analyzeduration 值，单位：微秒
-    format_ctx->probesize = 1000000000LL; // 设置 probesize 值，单位：字节
 
-    if (avformat_find_stream_info(format_ctx, NULL) < 0) {
-        LOG_ERROR("No stream info found in file {}", fileName);
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    // 找到第一条视频流
-    int video_stream_index = -1;
-    for (unsigned int i = 0; i < format_ctx->nb_streams; i++) {
-        if (format_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            video_stream_index = i;
-            break;
+    for (unsigned int streamInd = 0; streamInd < streams->size(); streamInd++) {
+        Poco::JSON::Object::Ptr stream = streams->getObject(streamInd);
+        if (stream->optValue<std::string>("codec_type", "") == "video") {
+            Poco::JSON::Array::Ptr sideDataLists = stream->getArray("side_data_list");
+            if (!sideDataLists.isNull()) {
+                for (unsigned int sideDataListInd = 0; sideDataListInd < sideDataLists->size(); sideDataListInd++) {
+                    Poco::JSON::Object::Ptr sideDataList = sideDataLists->getObject(sideDataListInd);
+                    if (sideDataList->optValue<std::string>("side_data_type", "") == "DOVI configuration record") {
+                        return GetHDRTypeByDolbyConf(sideDataList->optValue("dv_profile", -1),
+                                                     sideDataList->optValue("dv_bl_signal_compatibility_id", -1));
+                    }
+                }
+            }
+            // 当不存在Dolby配置时, 通过视频的色彩传输标准来判断
+            std::string colorTransfer = stream->optValue<std::string>("color_transfer", "");
+            if (colorTransfer == "smpte2084") {
+                return VideoRangeType::HDR10;
+            } else if (colorTransfer == "arib-std-b67") {
+                return VideoRangeType::HLG;
+            } else {
+                return VideoRangeType::SDR;
+            }
         }
     }
 
-    if (video_stream_index == -1) {
-        LOG_ERROR("No video stream found in file {}", fileName);
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    AVStream          *video_stream = format_ctx->streams[video_stream_index];
-    AVCodecParameters *codecpar     = video_stream->codecpar;
-
-    // 检测是否为视频codec
-    if (codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
-        LOG_ERROR("The selected stream is not a video stream, file: {}, codec type: ", fileName, codecpar->codec_type);
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    // 查找视频流解码器
-    const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
-    if (!codec) {
-        LOG_ERROR("Unsupported codec for the video stream, file: {}", fileName);
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    // 分配codec上下文
-    AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
-    if (!codec_ctx) {
-        LOG_ERROR("Could not allocate codec context");
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    // 从输入流拷贝codec参数到输出codec上下文
-    if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
-        LOG_ERROR("Could not copy codec parameters to codec context");
-        avcodec_free_context(&codec_ctx);
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    // 初始化给定AVCodec的上下文
-    if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
-        LOG_ERROR("Could not copy codec parameters to codec context");
-        avcodec_free_context(&codec_ctx);
-        avformat_close_input(&format_ctx);
-        return VideoRangeType::UNKNOWN;
-    }
-
-    // 通过AVDOVIDecoderConfigurationRecord来获取视频的HDR类型
-    if (codec_ctx->coded_side_data) {
-        if (codec_ctx->coded_side_data->type == AV_PKT_DATA_DOVI_CONF) {
-            hdrType = GetHDRTypeByDolbyConf(codec_ctx->coded_side_data->data, codec_ctx->coded_side_data->size);
-        }
-    } else {
-        if (codecpar->color_trc == AVCOL_TRC_SMPTE2084) {
-            hdrType = VideoRangeType::HDR10;
-        } else if (codecpar->color_trc == AVCOL_TRC_ARIB_STD_B67) {
-            hdrType = VideoRangeType::HLG;
-        } else {
-            hdrType = VideoRangeType::SDR;
-        }
-    }
-
-    // 清除收尾
-    avcodec_free_context(&codec_ctx);
-    avformat_close_input(&format_ctx);
-    avformat_network_deinit();
-
-    return hdrType;
+    return VideoRangeType::UNKNOWN;
 }

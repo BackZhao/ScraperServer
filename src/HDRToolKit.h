@@ -3,8 +3,6 @@
 #include <map>
 #include <string>
 
-#include <cstdint>
-
 /**
  * @brief 视频流的HDR类型
  * 
@@ -37,9 +35,11 @@ class HDRToolKit
 {
 public:
 
+    static bool Checkffprobe();
+
     static VideoRangeType GetHDRTypeFromFile(const std::string& fileName);
 
 private:
 
-    static VideoRangeType GetHDRTypeByDolbyConf(const uint8_t* data, std::size_t dataSize);
+    static VideoRangeType GetHDRTypeByDolbyConf(int dv_profile, int dv_bl_signal_compatibility_id);
 };

@@ -225,13 +225,10 @@ add_library(HDRToolKit
   STATIC
   src/HDRToolKit.cpp
   )
-find_package(FFMPEG REQUIRED COMPONENTS avcodec avutil avformat)
-target_include_directories(HDRToolKit PRIVATE ${FFMPEG_INCLUDE_DIRS})
-target_link_directories(HDRToolKit PRIVATE ${FFMPEG_LIBRARY_DIRS})
 target_link_libraries(HDRToolKit
   PRIVATE
   Logger
-  ${FFMPEG_LIBRARIES}
+  Poco::JSON
   )
 
 add_executable(Demo
