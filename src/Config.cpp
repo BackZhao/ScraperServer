@@ -113,6 +113,11 @@ bool Config::IsAuto()
     return m_appConf.isAuto;
 }
 
+std::string Config::GetffprobePath()
+{
+    return m_appConf.ffprobePath;
+}
+
 const std::map<VideoType, std::vector<std::string>>& Config::GetPaths()
 {
     return m_appConf.dataSourceConf.paths;
@@ -199,6 +204,8 @@ bool Config::ParseConfFile()
         for (const auto& pathVar : *(dataSourceJson->getArray("TVs"))) {
             m_appConf.dataSourceConf.paths[TV].push_back(pathVar.toString());
         }
+
+        m_appConf.ffprobePath = jsonPtr->optValue<std::string>("ffprobePath", "");
     } catch (Poco::Exception& e) {
         LOG_ERROR("Parse conf file {} failed: {}", m_confFile, e.displayText());
         return false;

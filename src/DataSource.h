@@ -63,5 +63,6 @@ private:
 
 private:
 
-    static bool m_isCancel; // 是否取消扫描
+    static bool m_isCancel;     // 是否取消扫描
+    static bool m_ffprobeReady; // ffprobe是否可以正常运行
 };

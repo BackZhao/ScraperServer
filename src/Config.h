@@ -74,6 +74,7 @@ struct AppConf {
     DataSourceConf dataSourceConf;
     int            autoInterval = AUTO_INTERVAL; // 自动刮削的间隔
     bool           isAuto;                       // 是否为自动刮削模式
+    std::string    ffprobePath;                  // ffprobe的路径, 用于读取视频元数据(HDR等)
 };
 
 class Config
@@ -192,6 +193,13 @@ public:
      * @return false 否
      */
     bool IsAuto();
+
+    /**
+     * @brief 获取ffprobe的路径
+     * 
+     * @return std::string ffprobe的路径
+     */
+    std::string GetffprobePath();
 
     const std::map<VideoType, std::vector<std::string>>& GetPaths();
 
