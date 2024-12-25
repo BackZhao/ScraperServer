@@ -19,7 +19,7 @@ BEGIN
             VALUE "FileDescription", "ScraperServer"
             VALUE "FileVersion", "1.0"
             VALUE "InternalName", "ScraperServer"
-            VALUE "LegalCopyright", "Copyright(c) backzhao@qq.cn 2023. All rights reserved."
+            VALUE "LegalCopyright", "Copyright(c) backzhao@qq.cn 2023-2024. All rights reserved."
             VALUE "OriginalFilename", "ScraperServer.exe"
             VALUE "ProductName", "ScraperServer"
             VALUE "ProductVersion", "1.0"
