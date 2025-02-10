@@ -162,8 +162,9 @@ HTTPRequestHandler* AppRequestHandlerFactory::CheckAuth(const HTTPServerRequest&
         return new AuthHandler;
     }
 
-    // 校验用户名密码(admin:kaida)
-    Poco::Net::HTTPDigestCredentials credentials("admin", "kaida");
+    // 校验用户名密码
+    // TODO: 密码使用MD5储存在配置文件中, 不应该明文存储在代码中; 配置文件未定义密码时, 应生成随机复杂密码
+    Poco::Net::HTTPDigestCredentials credentials("admin", "Ss@@bkzhao97");
     if (credentials.verifyAuthInfo(request)) {
         LOG_TRACE("Authorized success from client {}", request.clientAddress().toString());
         return nullptr;

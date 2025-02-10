@@ -112,7 +112,7 @@ bool Control::DigestAuth()
     m_session.receiveResponse(m_response);
     if (m_response.getStatus() == Poco::Net::HTTPResponse::HTTP_UNAUTHORIZED) {
         // 在HTTP请求头中填入用户名和密码
-        Poco::Net::HTTPDigestCredentials crediential("admin", "kaida");
+        Poco::Net::HTTPDigestCredentials crediential("admin", "Ss@@bkzhao97");
         crediential.authenticate(m_request, m_response);
         return true;
     } else {
