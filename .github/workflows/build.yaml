@@ -41,7 +41,7 @@ jobs:
         run: cmake --build build/native --target package
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: my-artifact
+          name: ScraperServer-${{ matrix.os }}-${{ runner.arch }}
           path: build/native/*.tar.gz
