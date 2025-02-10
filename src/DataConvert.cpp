@@ -356,7 +356,7 @@ bool WriteEpisodeNfo(const Array::Ptr                jsonArrPtr,
             createAndAppendText(rootEle, "plot", episodeJsonPtr->getValue<std::string>("overview"));
         } else {
             // 强制使用在线剧集元数据时, 大于在线集数的使用生成的元数据
-            if (forceUseOnlineTvMeta && i <= jsonArrPtr->size()) {
+            if (forceUseOnlineTvMeta && i < jsonArrPtr->size()) {
                 std::string title = episodeJsonPtr->getValue<std::string>("name");
                 createAndAppendText(rootEle, "title", title);
                 createAndAppendText(rootEle, "season", std::to_string(episodeJsonPtr->getValue<int>("season_number")));
