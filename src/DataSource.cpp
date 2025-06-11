@@ -15,6 +15,7 @@
 #include <Poco/Path.h>
 #include <Poco/SortedDirectoryIterator.h>
 
+#include "CommonType.h"
 #include "DataConvert.h"
 #include "HDRToolKit.h"
 #include "Logger.h"
@@ -341,8 +342,13 @@ bool DataSource::ScanMovie(const std::vector<std::string>& paths,
 
     // 遍历所有电影数据源
     for (const auto& moviePath : paths) {
+        if (!Poco::File(moviePath).exists()) {
+            LOG_ERROR("Given path {} doesn't exist", moviePath);
+            continue;
+        }
+
         if (!Poco::File(moviePath).isDirectory()) {
-            LOG_ERROR("Given path {} is not dir or doesn't exist", moviePath);
+            LOG_ERROR("Given path {} is not a directory", moviePath);
             continue;
         }
 
@@ -512,8 +518,13 @@ bool DataSource::ScanTv(const std::vector<std::string>& paths,
     // 遍历所有电视剧数据源
     const auto& tvPaths = paths;
     for (const auto& tvPath : tvPaths) {
+        if (!Poco::File(tvPath).exists()) {
+            LOG_ERROR("Given path {} doesn't exist", tvPath);
+            continue;
+        }
+
         if (!Poco::File(tvPath).isDirectory()) {
-            LOG_ERROR("Given path {} is not dir or doesn't exist", tvPath);
+            LOG_ERROR("Given path {} is not a directory", tvPath);
             continue;
         }
 
