@@ -128,7 +128,23 @@ bool DataSource::IsPNGCompleted(const std::string& posterName)
 
 void GetHdrFormat(VideoInfo& videoInfo)
 {
-    videoInfo.hdrType = HDRToolKit::GetHDRTypeFromFile(videoInfo.videoPath);
+    std::string videoPath;
+    switch (videoInfo.videoType) {
+        case VideoType::MOVIE: {
+            videoPath = videoInfo.videoPath;
+            break;
+        }
+        case VideoType::TV: {
+            videoPath = videoInfo.videoDetail.episodePaths.front(); // 电视剧取第一集来检测HDR格式
+            break;
+        }
+        default: {
+            LOG_WARN("Unsupported video type to check HDR format!");
+            return;
+        }
+    }
+
+    videoInfo.hdrType = HDRToolKit::GetHDRTypeFromFile(videoPath);
     LOG_DEBUG("VideoRangeType: {}, {}", VIDEO_RANGE_TYPE_TO_STR_MAP.at(videoInfo.hdrType), videoInfo.videoPath);
 }
 
