@@ -14,6 +14,7 @@
 #include <Poco/File.h>
 #include <Poco/Path.h>
 #include <Poco/SortedDirectoryIterator.h>
+#include <Poco/String.h>
 
 #include "CommonType.h"
 #include "DataConvert.h"
@@ -30,7 +31,7 @@ bool DataSource::IsVideo(const std::string& suffix)
 {
     // 比较文件名的最后四个字符(即后缀名)是否属于规定之内
     for (auto it = VIDEO_SUFFIX.begin(); it != VIDEO_SUFFIX.end(); it++) {
-        if (*it == suffix) {
+        if (Poco::icompare(*it, suffix) == 0) {
             return true;
         }
     }
