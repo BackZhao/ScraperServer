@@ -23,14 +23,6 @@ jobs:
         if: runner.os == 'Windows'
         uses: seanmiddleditch/gha-setup-vsdevenv@master
 
-      - name: Cache CMake build directory
-        uses: actions/cache@v2
-        with:
-          path: build
-          key: cmake-build-${{ runner.os }}
-          restore-keys: |
-            cmake-build-${{ runner.os }}-
-
       - name: CMake configure
         run: cmake -B build/native -G Ninja
 
