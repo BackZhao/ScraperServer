@@ -42,13 +42,6 @@ public:
 private:
 
     /**
-     * @brief 信号处理函数
-     * 
-     * @param signum 信号的编号
-     */
-    static void SignalHandler(int signum);
-
-    /**
      * @brief 初始化
      *
      * @param app
@@ -63,7 +56,7 @@ private:
 
 private:
 
-    static std::atomic<int> m_signum;           // 程序捕获到的信号
-    Poco::Net::HTTPServer*  m_httpServer;       // HTTP服务器
-    std::thread             m_autoUpdateThread; // 自动刮削线程
+    Poco::Net::HTTPServer*  m_httpServer;         // HTTP服务器
+    std::thread             m_autoUpdateThread;   // 自动刮削线程
+    std::thread             m_signalHandleThread; // Manager类刷新的线程
 };

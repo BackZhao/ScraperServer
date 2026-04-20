@@ -1,14 +1,16 @@
 #pragma once
 
-#include <sstream>
+#include <vector>
 
 #include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-const size_t DEFAULT_LOGFILE_SIZE  = 5UL * 1024UL * 1024UL; // 默认的日志文件大小, 5MiB
-const size_t DEFAULT_LOGFILE_COUNT = 3UL;                   // 默认滚动的日志文件个数, 3个
+const size_t DEFAULT_LOGFILE_SIZE = 5UL * 1024UL * 1024UL; // 默认的日志文件大小, 5MiB
+const size_t DEFAULT_LOGFILE_COUNT = 3UL; // 默认滚动的日志文件个数, 3个
+
+extern std::vector<int> GCrashLogFds; // 保存崩溃日志的文件描述符
 
 #define LOG_CRITICAL(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::critical, __VA_ARGS__)
 #define LOG_ERROR(...) Logger::Instance().Log(__FILE__, __LINE__, spdlog::level::err, __VA_ARGS__)
@@ -19,27 +21,26 @@ const size_t DEFAULT_LOGFILE_COUNT = 3UL;                   // 默认滚动的�
 
 /**
  * @brief 日志记录器
- *
+ * 
  */
-class Logger
-{
+class Logger {
+
 public:
 
     /**
      * @brief 单例模式
-     *
+     * 
      * @return Logger& 单例
      */
     static Logger& Instance();
 
-    ~Logger()
-    {
+    ~Logger() {
         spdlog::shutdown();
     }
 
     /**
      * @brief 初始化日志记录器
-     *
+     * 
      * @param level 日志等级
      * @param logFile 保存的日志文件, 留空时不写日志文件(默认为空)
      * @param maxSize 日志文件的大小上限, 默认5MiB
@@ -87,12 +88,18 @@ private:
 
     /**
      * @brief 构造函数私有化(单例)
-     *
+     * 
      */
-    Logger(){};
+    Logger() {};
 
     std::shared_ptr<spdlog::logger>                       m_logger;         // spdlog的日志记录器
     std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> m_fileSink;       // 标准输出日志接收器
     std::shared_ptr<spdlog::sinks::stdout_color_sink_mt>  m_stdoutSink;     // 标准输出日志接收器
     std::shared_ptr<spdlog::sinks::ringbuffer_sink_mt>    m_ringbufferSink; // 环形队列日志接收器
 };
+
+/**
+ * @brief 初始化崩溃日志文件描述符
+ * 
+ */
+void InitCrashLogFd();

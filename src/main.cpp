@@ -9,15 +9,22 @@
 #include "ApiManager.h"
 #include "Config.h"
 #include "Control.h"
-#include "DataSource.h"
 #include "HttpServer.h"
 #include "Logger.h"
 #include "Option.h"
 #include "ResourceManager.h"
-#include "TMDBAPI.h"
+#include "SignalHandler.h"
 
 int main(int argc, char* argv[])
 {
+    // 注册程序崩溃的信号处理函数
+    InstallCrashHandler();
+
+    // 屏蔽SIGINT, SIGTERM
+    SignalMask();
+
+    SetupAltstack();
+
     // 如果是控制命令
     if (Control::isCtlCmd(argc, argv)) {
         Control control(argc, argv);
@@ -37,6 +44,9 @@ int main(int argc, char* argv[])
                                  Config::Instance().GetLogFile())) {
         return 1;
     }
+
+    // 初始化崩溃日志文件描述符
+    InitCrashLogFd();
 
     if (!ResourceManager::Instance().Init()) {
         LOG_ERROR("Resource init failed!");

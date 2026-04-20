@@ -8,16 +8,16 @@
 #include "Config.h"
 #include "HttpRequestHandler.h"
 #include "Logger.h"
-
-std::atomic<int> HTTPServerApp::m_signum(-1);
+#include "SignalHandler.h"
 
 void HTTPServerApp::AutoUpdate()
 {
+    SetupAltstack();
     static auto lastUpdateTime = std::chrono::steady_clock::time_point::min();
 
     LOG_INFO("Auto update interval: {}s", Config::Instance().GetAutoInterval());
 
-    while (m_signum.load() == -1 && !ApiManager::Instance().IsQuitting()) {
+    while (GStopFlag.load(std::memory_order_relaxed) -1 && !ApiManager::Instance().IsQuitting()) {
         if (std::chrono::steady_clock::now() > lastUpdateTime +
             std::chrono::seconds(Config::Instance().GetAutoInterval())) {
             ApiManager::Instance().ProcessScan(TV, false);
@@ -26,13 +26,6 @@ void HTTPServerApp::AutoUpdate()
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-}
-
-void HTTPServerApp::SignalHandler(int signum)
-{
-    m_signum.store(signum);
-    LOG_INFO("Signal recieved: {}", signum);
-    DataSource::Cancel();
 }
 
 int HTTPServerApp::run()
@@ -60,18 +53,13 @@ int HTTPServerApp::run()
     // m_httpServer->stop();
     // return 0;
 
-    // 捕获SIGINT和SIGTERM
-    signal(SIGINT, SignalHandler);
-    signal(SIGTERM, SignalHandler);
-    // 等待捕获信号
-    while (m_signum.load() == -1 && !ApiManager::Instance().IsQuitting()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
+    
+    m_signalHandleThread   = std::thread(SignalThread);
 
     if (ApiManager::Instance().IsQuitting()) {
         LOG_INFO("Quit api recieved, quiting...");
     } else {
-        LOG_INFO("Signal recieved: {}, quiting...", m_signum.load());
+        LOG_INFO("Signal recieved: {}, quiting...", GStopFlag.load(std::memory_order_relaxed));
     }
 
     // 回收线程资源
@@ -79,9 +67,14 @@ int HTTPServerApp::run()
         LOG_INFO("Recycle the auto update thread...");
         m_autoUpdateThread.join();
     }
+    if (m_signalHandleThread.joinable()) {
+        m_signalHandleThread.join();
+    }
 
     // 停止HTTP服务器
+    LOG_INFO("Stopping http server...");
     m_httpServer->stopAll(true);
+    LOG_INFO("Stopped http server.");
 
     return 0;
 }

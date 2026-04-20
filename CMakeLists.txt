@@ -196,6 +196,8 @@ add_library(Logger
   )
 target_link_libraries(Logger
   PUBLIC
+    ${compile_flags}
+    ${version_macro}
     spdlog::spdlog_header_only
   )
 
@@ -208,6 +210,7 @@ target_link_libraries(Option
   ${version_macro}
   getopt
   Utils
+  BuildInfo
   )
 
 add_library(Config
@@ -231,29 +234,21 @@ target_link_libraries(HDRToolKit
   Poco::JSON
   )
 
-add_executable(Demo
-  src/Demo.cpp
-  src/HttpRequestHandler.cpp
-  src/HttpServer.cpp
-  src/ApiManager.cpp
-  src/DataConvert.cpp
-  src/DataSource.cpp
-  src/ResourceManager.cpp
-  src/TMDBAPI.cpp
-  src/Control.cpp
-  )
-target_link_libraries(Demo
-  PRIVATE
-    ${version_macro}
+add_library(BuildInfo INTERFACE)
+target_compile_definitions(BuildInfo INTERFACE
+    BUILD_COMPILER_ID="${CMAKE_CXX_COMPILER_ID}"
+    BUILD_COMPILER_VERSION="${CMAKE_CXX_COMPILER_VERSION}"
+    BUILD_COMPILER_PATH="${CMAKE_CXX_COMPILER}"
+    BUILD_TYPE="$<CONFIG>"
+)
+
+add_library(Backtrace STATIC src/Backtrace.cpp)
+target_link_libraries(Backtrace
+  PUBLIC
     ${compile_flags}
+    ${version_macro}
     Logger
-    Config
-    Option
-    HDRToolKit
-    Poco::Net
-    Poco::JSON
-    Poco::XML
-    Poco::Zip
+    BuildInfo
   )
 
 add_executable(ScraperServer
@@ -266,7 +261,24 @@ add_executable(ScraperServer
   src/ResourceManager.cpp
   src/TMDBAPI.cpp
   src/Control.cpp
+  src/SignalHandler.cpp
   )
+
+# 导出符号表
+if (NOT WIN32)
+  set_target_properties(ScraperServer PROPERTIES ENABLE_EXPORTS ON)
+  # 开启调试信息, 即便是 Release，我们仍然加 '-g' 用于生成行号映射
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
+  # 生成并分离调试文件(ScraperServer.debug)
+  add_custom_command(TARGET ScraperServer POST_BUILD
+      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:ScraperServer> $<TARGET_FILE:ScraperServer>.debug
+      COMMAND ${CMAKE_STRIP} --strip-debug --strip-unneeded $<TARGET_FILE:ScraperServer>
+      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:ScraperServer>.debug $<TARGET_FILE:ScraperServer>
+      COMMENT "Separating debug symbols for ScraperServer"
+  )
+  install(FILES $<TARGET_FILE:ScraperServer>.debug DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
+
 target_link_libraries(ScraperServer
   PRIVATE
     ${version_macro}
@@ -274,6 +286,8 @@ target_link_libraries(ScraperServer
     Logger
     Config
     Option
+    Backtrace
+    BuildInfo
     HDRToolKit
     Poco::Net
     Poco::JSON
@@ -336,7 +350,6 @@ ${_}_binary_res_zip_size = ${_}_binary_res_zip_end - ${_}_binary_res_zip_start
 ")
       endif()
       target_sources(ScraperServer PRIVATE ${RES_ASM})
-      target_sources(Demo PRIVATE ${RES_ASM})
   else()
     set(RES_O ${CMAKE_CURRENT_BINARY_DIR}/res.o)
     add_custom_command(
@@ -347,7 +360,6 @@ ${_}_binary_res_zip_size = ${_}_binary_res_zip_end - ${_}_binary_res_zip_start
       VERBATIM
       )
     target_sources(ScraperServer PRIVATE ${RES_O})
-    target_sources(Demo PRIVATE ${RES_O})
   endif()
 endif()
 
@@ -356,7 +368,6 @@ include(GNUInstallDirs)
 install(
   TARGETS
     ScraperServer
-    Demo
     Net
     JSON
     XML

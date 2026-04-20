@@ -10,6 +10,7 @@
 #include <version.h>
 
 #include "Utils.h"
+#include "BuildInfo.h"
 
 int ParseOption()
 {
@@ -117,6 +118,9 @@ int Option::Process()
 
             case 'v': {
                 std::cout << VERSION << std::endl;
+                printf("Build Info:\n");
+                printf("  Compiler: %s (%s %s)\n", BUILD_COMPILER_PATH, BUILD_COMPILER_ID, BUILD_COMPILER_VERSION);
+                printf("  Type: %s\n", BUILD_TYPE);
                 return 0;
             }
 
