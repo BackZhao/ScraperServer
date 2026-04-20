@@ -141,7 +141,23 @@
         }
 
         .status-info div {
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background-color: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            border-radius: 5px;
+            transition: width 0.3s ease;
         }
 
         .table-container {
@@ -380,7 +396,12 @@
 
         <div class="status-info">
             <div>扫描状态: {{ scanDetail.get(currentType).status }}</div>
-            <div>扫描进度: {{ scanDetail.get(currentType).status === 'finished' ? '100%' : scanDetail.get(currentType).processedVideoNum + '/' + scanDetail.get(currentType).totalVideoNum }}</div>
+            <div>
+                扫描进度: {{ scanDetail.get(currentType).status === 'finished' ? '100%' : scanDetail.get(currentType).processedVideoNum + '/' + scanDetail.get(currentType).totalVideoNum }}
+                <div class="progress-container">
+                    <div class="progress-bar" :style="{ width: getProgressPercentage() + '%' }"></div>
+                </div>
+            </div>
             <div>开始时间: {{ scanDetail.get(currentType).scanBeginTime }}</div>
             <div>结束时间: {{ scanDetail.get(currentType).scanEndTime }}</div>
             <div>视频总数: {{ scanDetail.get(currentType).totalVideoNum }}</div>
@@ -563,6 +584,17 @@
                         default:
                             return '';
                     }
+                },
+
+                getProgressPercentage() {
+                    const detail = this.scanDetail.get(this.currentType);
+                    if (detail.status === 'finished') {
+                        return 100;
+                    }
+                    if (detail.totalVideoNum === 0) {
+                        return 0;
+                    }
+                    return Math.round((detail.processedVideoNum / detail.totalVideoNum) * 100);
                 },
 
                 Scan() {
