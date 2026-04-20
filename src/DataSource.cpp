@@ -208,10 +208,20 @@ void DataSource::CheckVideoStatus(VideoInfo& videoInfo, bool forceDetectHdr)
         case MOVIE: {
             const std::string& baseNameWithDir =
                 Poco::Path(videoInfo.videoPath).parent().toString() + Poco::Path(videoInfo.videoPath).getBaseName();
-            videoInfo.nfoPath       = baseNameWithDir + ".nfo";
             videoInfo.posterPath    = baseNameWithDir + "-poster.jpg";
             videoInfo.fanartPath    = baseNameWithDir + "-fanart.jpg";
             videoInfo.clearlogoPath = baseNameWithDir + "-clearlogo.jpg";
+            switch (videoInfo.videoFiletype) {
+                case IN_FOLDER: {
+                    const std::string& dirName = Poco::Path(videoInfo.videoPath).parent().toString();
+                    videoInfo.nfoPath          = dirName + "movie.nfo";
+                    break;
+                }
+                case NO_FOLDER: {
+                    videoInfo.nfoPath = baseNameWithDir + ".nfo";
+                    break;
+                }
+            };
             CheckNfo(videoInfo.nfoPath);
             CheckPoster(videoInfo.posterPath);
             CheckFanart(videoInfo.fanartPath);
